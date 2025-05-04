@@ -1,0 +1,35 @@
+syntax = "proto3";
+option go_package = "github.com/etesami/detection-tracking-system/protoc";
+package detection_tracking_system;
+
+service DetectionTrackingPipeline {
+    // A simple RPC to send data to the server
+    // and receive an acknowledgment
+    rpc SendDataToServer(Data) returns (Ack);
+
+    // A simple RPC to request data from the local storage
+    rpc ReceiveDataFromServer(Data) returns (DataResponse);
+
+    // A simple RPC to send a ping to the service and receive a pong primarily for 
+    // testing the connection and latency
+    rpc CheckConnection(Data) returns (Ack);
+}
+
+message Data {
+    string payload = 1;
+    string sent_timestamp = 2;
+}
+
+message DataResponse {
+    string status = 1;
+    string payload = 2;
+    string received_timestamp = 3;
+    string sent_timestamp = 4;
+}
+
+message Ack {
+    string status = 1;
+    string original_sent_timestamp = 2;
+    string received_timestamp = 3;
+    string ack_sent_timestamp = 4;
+}
