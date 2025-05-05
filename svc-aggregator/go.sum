@@ -6,6 +6,10 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/etesami/detection-tracking-system v0.0.0-20250505062732-0a634fe61eae h1:YKUvJnLx3vn96woMuBHJ/G96ZL7b+znAFtbA8PfRqww=
 github.com/etesami/detection-tracking-system v0.0.0-20250505062732-0a634fe61eae/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
+github.com/etesami/detection-tracking-system v0.0.0-20250505085445-41d748571dd1 h1:aHlJDdgBncTX0QaScVvtBx7LpbInUB5kR33Q/jJE7V4=
+github.com/etesami/detection-tracking-system v0.0.0-20250505085445-41d748571dd1/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
+github.com/etesami/detection-tracking-system v0.0.0-20250505090712-fc850a8897da h1:WcWWhA7cjvnROKAGSlEBB2OplCm59oR6to01Gl7miiU=
+github.com/etesami/detection-tracking-system v0.0.0-20250505090712-fc850a8897da/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=

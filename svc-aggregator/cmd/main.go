@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"sync"
+	"sync/atomic"
+	"syscall"
 
 	api "github.com/etesami/detection-tracking-system/api"
 	metric "github.com/etesami/detection-tracking-system/pkg/metric"
@@ -47,7 +51,10 @@ func main() {
 	}
 
 	s := &internal.Server{
-		Clients: sync.Map{},
+		Clients:         sync.Map{},
+		RegisterCh:      make(chan *api.Service, 100),
+		DetectionClient: atomic.Value{},
+		TrackingClient:  atomic.Value{},
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterDetectionTrackingPipelineServer(grpcServer, s)
@@ -59,48 +66,67 @@ func main() {
 		}
 	}()
 
-	go s.ClientHandler()
+	// go s.ClientHandler()
 
-	// // Setup the remote service (detection and tracking) and start the connection as client
-	// // when we send data to the remote services when we have to
-	// REMOTE_SVC_HOST := os.Getenv("REMOTE_SVC_HOST")
-	// REMOTE_SVC_PORT := os.Getenv("REMOTE_SVC_PORT")
-	// if REMOTE_SVC_HOST == "" || REMOTE_SVC_PORT == "" {
-	// 	panic("REMOTE_SVC_HOST or REMOTE_SVC_PORT environment variable is not set")
+	// Setup the remote service (detection and tracking) and start the connection as client
+	// when we send data to the remote services when we have to
+	REMOTE_DETECTION_HOST := os.Getenv("REMOTE_DETECTION_HOST")
+	REMOTE_DETECTION_PORT := os.Getenv("REMOTE_DETECTION_PORT")
+	if REMOTE_DETECTION_HOST == "" || REMOTE_DETECTION_PORT == "" {
+		panic("REMOTE_DETECTION_HOST or REMOTE_DETECTION_PORT environment variable is not set")
+	}
+
+	// targetDetectionSvc := api.Service{
+	// 	Address: REMOTE_DETECTION_HOST,
+	// 	Port:    REMOTE_DETECTION_PORT,
 	// }
 
-	// targetSvc := &api.Service{
-	// 	Address: REMOTE_SVC_HOST,
-	// 	Port:    REMOTE_SVC_PORT,
-	// }
+	// go utils.MonitorConnection(targetDetectionSvc, &s.DetectionClient)
 
-	// var conn *grpc.ClientConn
-	// var client pb.DetectionTrackingPipelineClient
-	// go func() {
-	// 	for {
-	// 		if err := targetSvc.ServiceReachable(); err == nil {
-	// 			var err error
-	// 			conn, err = grpc.NewClient(
-	// 				targetSvc.Address+":"+targetSvc.Port,
-	// 				grpc.WithTransportCredentials(insecure.NewCredentials()))
-	// 			if err != nil {
-	// 				log.Printf("Failed to connect to target service: %v", err)
-	// 				return
-	// 			}
-	// 			client = pb.NewDetectionTrackingPipelineClient(conn)
-	// 			log.Printf("Connected to target service: %s:%s\n", targetSvc.Address, targetSvc.Port)
-	// 			return
-	// 		} else {
-	// 			log.Printf("Target service is not reachable: %v", err)
-	// 			time.Sleep(5 * time.Second)
-	// 		}
-	// 	}
-	// }()
-	// defer conn.Close()
+	REMOTE_TRACKING_HOST := os.Getenv("REMOTE_TRACKING_HOST")
+	REMOTE_TRACKING_PORT := os.Getenv("REMOTE_TRACKING_PORT")
+	if REMOTE_TRACKING_HOST == "" || REMOTE_TRACKING_PORT == "" {
+		panic("REMOTE_TRACKING_HOST or REMOTE_TRACKING_PORT environment variable is not set")
+	}
+	// targetTrackingSvc := api.Service{
+	// 	Address: REMOTE_TRACKING_HOST,
+	// 	Port:    REMOTE_TRACKING_PORT,
+	// }
+	// go utils.MonitorConnection(targetTrackingSvc, &s.TrackingClient)
 
 	metricAddr := os.Getenv("METRIC_ADDR")
 	metricPort := os.Getenv("METRIC_PORT")
-	http.Handle("/metrics", promhttp.Handler())
-	log.Printf("Starting server on :%s\n", metricPort)
-	http.ListenAndServe(fmt.Sprintf("%s:%s", metricAddr, metricPort), nil)
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+
+	server := &http.Server{
+		Addr:    fmt.Sprintf("%s:%s", metricAddr, metricPort),
+		Handler: mux,
+	}
+
+	// Start server in a goroutine
+	go func() {
+		log.Printf("Starting metrics server on %s\n", server.Addr)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("ListenAndServe(): %v", err)
+		}
+	}()
+
+	// Set up channel to listen for interrupt or terminate signals
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	// Create a context that will be cancelled on SIGINT/SIGTERM
+	// ctx, cancel := context.WithCancel(context.Background())
+
+	<-sigChan // Wait for signal
+	log.Printf("Received shutdown signal\n")
+	for _, vi := range s.VideoInputs {
+		vi.Signal.Close()
+	}
+	// cancel()                  // Cancel the context
+	grpcServer.GracefulStop() // Stop the gRPC server gracefully
+	if err := server.Shutdown(context.Background()); err != nil {
+		log.Printf("Error shutting down server: %v\n", err)
+	}
+	log.Printf("Server shut down gracefully\n")
 }

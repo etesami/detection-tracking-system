@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync/atomic"
 	"time"
 
 	metric "github.com/etesami/detection-tracking-system/pkg/metric"
@@ -18,11 +19,14 @@ type Server struct {
 }
 
 // processTicker processes the ticker event
-func ProcessTicker(client *pb.DetectionTrackingPipelineClient, serverName string, metricList *metric.Metric, rtspPort string) error {
-	if *client == nil {
-		log.Printf("Client is not ready yet")
+func ProcessTicker(clientRef *atomic.Value, serverName string, metricList *metric.Metric, rtspPort string) error {
+
+	clientIface := clientRef.Load()
+	if clientIface == nil {
 		return nil
 	}
+	client := clientIface.(pb.DetectionTrackingPipelineClient)
+
 	ip, err := utils.GetOutboundIP()
 	if err != nil {
 		log.Printf("Error getting outbound IP: %v", err)
@@ -32,7 +36,7 @@ func ProcessTicker(client *pb.DetectionTrackingPipelineClient, serverName string
 			Payload:       fmt.Sprintf("%s:%s", ip, rtspPort),
 			SentTimestamp: fmt.Sprintf("%d", int(time.Now().UnixMilli())),
 		}
-		pong, err := (*client).SendDataToServer(context.Background(), ping)
+		pong, err := client.SendDataToServer(context.Background(), ping)
 		// in case the target service is not reachable anymore we should just return
 		if err != nil {
 			log.Printf("Error sending data to server: %v", err)
