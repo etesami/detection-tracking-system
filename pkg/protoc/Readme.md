@@ -13,4 +13,15 @@ protoc \
   --go_opt=paths=source_relative \
   --go-grpc_out=. \
   --go-grpc_opt=paths=source_relative detection_tracking_pipeline.proto.proto
+
+
+pip install grpcio
+pip install grpcio-tools
+
+python -m grpc_tools.protoc \
+  --python_out=. \
+  --grpc_python_out=. \
+  -I. detection_tracking_pipeline.proto.proto
+
+  
 ```
