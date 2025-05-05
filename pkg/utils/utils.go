@@ -2,11 +2,19 @@ package utils
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
+
+	api "github.com/etesami/detection-tracking-system/api"
+	pb "github.com/etesami/detection-tracking-system/pkg/protoc"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // calculateRtt calculates the round-trip time (RTT) based on the current time and the ack time
@@ -103,4 +111,39 @@ func GetIoU(bb1, bb2 BoundingBox) float64 {
 		return iou
 	}
 	return 0.0
+}
+
+func MonitorConnection(targetSvc api.Service, clientRef *atomic.Value) {
+	var conn *grpc.ClientConn
+
+	for {
+		if err := targetSvc.ServiceReachable(); err != nil {
+			if conn != nil {
+				conn.Close()
+			}
+			log.Printf("Target service [%s:%s] is not reachable: %v", targetSvc.Address, targetSvc.Port, err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		if conn == nil || conn.GetState().String() != "READY" {
+			if conn != nil {
+				conn.Close()
+			}
+			newConn, err := grpc.NewClient(
+				targetSvc.Address+":"+targetSvc.Port,
+				grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				log.Println("Failed to connect:", err)
+				time.Sleep(5 * time.Second)
+				continue
+			}
+
+			conn = newConn
+			client := pb.NewDetectionTrackingPipelineClient(conn)
+			clientRef.Store(client)
+			log.Println("gRPC client connected and stored")
+		}
+		time.Sleep(5 * time.Second)
+	}
 }
