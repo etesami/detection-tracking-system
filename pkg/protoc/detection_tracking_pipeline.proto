@@ -6,6 +6,7 @@ service DetectionTrackingPipeline {
     // A simple RPC to send data to the server
     // and receive an acknowledgment
     rpc SendDataToServer(Data) returns (Ack);
+    rpc SendFrameServer(FrameData) returns (Ack);
 
     // A simple RPC to request data from the local storage
     rpc ReceiveDataFromServer(Data) returns (DataResponse);
@@ -18,6 +19,12 @@ service DetectionTrackingPipeline {
 message Data {
     string payload = 1;
     string sent_timestamp = 2;
+}
+
+message FrameData {
+    string metadata = 1;
+    bytes frame_data = 2;
+    string sent_timestamp = 3;
 }
 
 message DataResponse {

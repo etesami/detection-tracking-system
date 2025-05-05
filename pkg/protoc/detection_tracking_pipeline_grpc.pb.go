@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	DetectionTrackingPipeline_SendDataToServer_FullMethodName      = "/detection_tracking_system.DetectionTrackingPipeline/SendDataToServer"
+	DetectionTrackingPipeline_SendFrameServer_FullMethodName       = "/detection_tracking_system.DetectionTrackingPipeline/SendFrameServer"
 	DetectionTrackingPipeline_ReceiveDataFromServer_FullMethodName = "/detection_tracking_system.DetectionTrackingPipeline/ReceiveDataFromServer"
 	DetectionTrackingPipeline_CheckConnection_FullMethodName       = "/detection_tracking_system.DetectionTrackingPipeline/CheckConnection"
 )
@@ -31,6 +32,7 @@ type DetectionTrackingPipelineClient interface {
 	// A simple RPC to send data to the server
 	// and receive an acknowledgment
 	SendDataToServer(ctx context.Context, in *Data, opts ...grpc.CallOption) (*Ack, error)
+	SendFrameServer(ctx context.Context, in *FrameData, opts ...grpc.CallOption) (*Ack, error)
 	// A simple RPC to request data from the local storage
 	ReceiveDataFromServer(ctx context.Context, in *Data, opts ...grpc.CallOption) (*DataResponse, error)
 	// A simple RPC to send a ping to the service and receive a pong primarily for
@@ -50,6 +52,16 @@ func (c *detectionTrackingPipelineClient) SendDataToServer(ctx context.Context, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Ack)
 	err := c.cc.Invoke(ctx, DetectionTrackingPipeline_SendDataToServer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *detectionTrackingPipelineClient) SendFrameServer(ctx context.Context, in *FrameData, opts ...grpc.CallOption) (*Ack, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Ack)
+	err := c.cc.Invoke(ctx, DetectionTrackingPipeline_SendFrameServer_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +95,7 @@ type DetectionTrackingPipelineServer interface {
 	// A simple RPC to send data to the server
 	// and receive an acknowledgment
 	SendDataToServer(context.Context, *Data) (*Ack, error)
+	SendFrameServer(context.Context, *FrameData) (*Ack, error)
 	// A simple RPC to request data from the local storage
 	ReceiveDataFromServer(context.Context, *Data) (*DataResponse, error)
 	// A simple RPC to send a ping to the service and receive a pong primarily for
@@ -100,6 +113,9 @@ type UnimplementedDetectionTrackingPipelineServer struct{}
 
 func (UnimplementedDetectionTrackingPipelineServer) SendDataToServer(context.Context, *Data) (*Ack, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendDataToServer not implemented")
+}
+func (UnimplementedDetectionTrackingPipelineServer) SendFrameServer(context.Context, *FrameData) (*Ack, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendFrameServer not implemented")
 }
 func (UnimplementedDetectionTrackingPipelineServer) ReceiveDataFromServer(context.Context, *Data) (*DataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReceiveDataFromServer not implemented")
@@ -143,6 +159,24 @@ func _DetectionTrackingPipeline_SendDataToServer_Handler(srv interface{}, ctx co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DetectionTrackingPipelineServer).SendDataToServer(ctx, req.(*Data))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DetectionTrackingPipeline_SendFrameServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FrameData)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DetectionTrackingPipelineServer).SendFrameServer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DetectionTrackingPipeline_SendFrameServer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DetectionTrackingPipelineServer).SendFrameServer(ctx, req.(*FrameData))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -193,6 +227,10 @@ var DetectionTrackingPipeline_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendDataToServer",
 			Handler:    _DetectionTrackingPipeline_SendDataToServer_Handler,
+		},
+		{
+			MethodName: "SendFrameServer",
+			Handler:    _DetectionTrackingPipeline_SendFrameServer_Handler,
 		},
 		{
 			MethodName: "ReceiveDataFromServer",

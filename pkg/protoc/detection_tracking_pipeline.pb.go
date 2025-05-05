@@ -73,6 +73,66 @@ func (x *Data) GetSentTimestamp() string {
 	return ""
 }
 
+type FrameData struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Metadata      string                 `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	FrameData     []byte                 `protobuf:"bytes,2,opt,name=frame_data,json=frameData,proto3" json:"frame_data,omitempty"`
+	SentTimestamp string                 `protobuf:"bytes,3,opt,name=sent_timestamp,json=sentTimestamp,proto3" json:"sent_timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FrameData) Reset() {
+	*x = FrameData{}
+	mi := &file_detection_tracking_pipeline_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FrameData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FrameData) ProtoMessage() {}
+
+func (x *FrameData) ProtoReflect() protoreflect.Message {
+	mi := &file_detection_tracking_pipeline_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FrameData.ProtoReflect.Descriptor instead.
+func (*FrameData) Descriptor() ([]byte, []int) {
+	return file_detection_tracking_pipeline_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *FrameData) GetMetadata() string {
+	if x != nil {
+		return x.Metadata
+	}
+	return ""
+}
+
+func (x *FrameData) GetFrameData() []byte {
+	if x != nil {
+		return x.FrameData
+	}
+	return nil
+}
+
+func (x *FrameData) GetSentTimestamp() string {
+	if x != nil {
+		return x.SentTimestamp
+	}
+	return ""
+}
+
 type DataResponse struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Status            string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
@@ -85,7 +145,7 @@ type DataResponse struct {
 
 func (x *DataResponse) Reset() {
 	*x = DataResponse{}
-	mi := &file_detection_tracking_pipeline_proto_msgTypes[1]
+	mi := &file_detection_tracking_pipeline_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -97,7 +157,7 @@ func (x *DataResponse) String() string {
 func (*DataResponse) ProtoMessage() {}
 
 func (x *DataResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_detection_tracking_pipeline_proto_msgTypes[1]
+	mi := &file_detection_tracking_pipeline_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -110,7 +170,7 @@ func (x *DataResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DataResponse.ProtoReflect.Descriptor instead.
 func (*DataResponse) Descriptor() ([]byte, []int) {
-	return file_detection_tracking_pipeline_proto_rawDescGZIP(), []int{1}
+	return file_detection_tracking_pipeline_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *DataResponse) GetStatus() string {
@@ -153,7 +213,7 @@ type Ack struct {
 
 func (x *Ack) Reset() {
 	*x = Ack{}
-	mi := &file_detection_tracking_pipeline_proto_msgTypes[2]
+	mi := &file_detection_tracking_pipeline_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -165,7 +225,7 @@ func (x *Ack) String() string {
 func (*Ack) ProtoMessage() {}
 
 func (x *Ack) ProtoReflect() protoreflect.Message {
-	mi := &file_detection_tracking_pipeline_proto_msgTypes[2]
+	mi := &file_detection_tracking_pipeline_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -178,7 +238,7 @@ func (x *Ack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Ack.ProtoReflect.Descriptor instead.
 func (*Ack) Descriptor() ([]byte, []int) {
-	return file_detection_tracking_pipeline_proto_rawDescGZIP(), []int{2}
+	return file_detection_tracking_pipeline_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Ack) GetStatus() string {
@@ -216,7 +276,12 @@ const file_detection_tracking_pipeline_proto_rawDesc = "" +
 	"!detection_tracking_pipeline.proto\x12\x19detection_tracking_system\"G\n" +
 	"\x04Data\x12\x18\n" +
 	"\apayload\x18\x01 \x01(\tR\apayload\x12%\n" +
-	"\x0esent_timestamp\x18\x02 \x01(\tR\rsentTimestamp\"\x96\x01\n" +
+	"\x0esent_timestamp\x18\x02 \x01(\tR\rsentTimestamp\"m\n" +
+	"\tFrameData\x12\x1a\n" +
+	"\bmetadata\x18\x01 \x01(\tR\bmetadata\x12\x1d\n" +
+	"\n" +
+	"frame_data\x18\x02 \x01(\fR\tframeData\x12%\n" +
+	"\x0esent_timestamp\x18\x03 \x01(\tR\rsentTimestamp\"\x96\x01\n" +
 	"\fDataResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x18\n" +
 	"\apayload\x18\x02 \x01(\tR\apayload\x12-\n" +
@@ -226,9 +291,10 @@ const file_detection_tracking_pipeline_proto_rawDesc = "" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x126\n" +
 	"\x17original_sent_timestamp\x18\x02 \x01(\tR\x15originalSentTimestamp\x12-\n" +
 	"\x12received_timestamp\x18\x03 \x01(\tR\x11receivedTimestamp\x12,\n" +
-	"\x12ack_sent_timestamp\x18\x04 \x01(\tR\x10ackSentTimestamp2\xa7\x02\n" +
+	"\x12ack_sent_timestamp\x18\x04 \x01(\tR\x10ackSentTimestamp2\x80\x03\n" +
 	"\x19DetectionTrackingPipeline\x12S\n" +
-	"\x10SendDataToServer\x12\x1f.detection_tracking_system.Data\x1a\x1e.detection_tracking_system.Ack\x12a\n" +
+	"\x10SendDataToServer\x12\x1f.detection_tracking_system.Data\x1a\x1e.detection_tracking_system.Ack\x12W\n" +
+	"\x0fSendFrameServer\x12$.detection_tracking_system.FrameData\x1a\x1e.detection_tracking_system.Ack\x12a\n" +
 	"\x15ReceiveDataFromServer\x12\x1f.detection_tracking_system.Data\x1a'.detection_tracking_system.DataResponse\x12R\n" +
 	"\x0fCheckConnection\x12\x1f.detection_tracking_system.Data\x1a\x1e.detection_tracking_system.AckB5Z3github.com/etesami/detection-tracking-system/protocb\x06proto3"
 
@@ -244,21 +310,24 @@ func file_detection_tracking_pipeline_proto_rawDescGZIP() []byte {
 	return file_detection_tracking_pipeline_proto_rawDescData
 }
 
-var file_detection_tracking_pipeline_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_detection_tracking_pipeline_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_detection_tracking_pipeline_proto_goTypes = []any{
 	(*Data)(nil),         // 0: detection_tracking_system.Data
-	(*DataResponse)(nil), // 1: detection_tracking_system.DataResponse
-	(*Ack)(nil),          // 2: detection_tracking_system.Ack
+	(*FrameData)(nil),    // 1: detection_tracking_system.FrameData
+	(*DataResponse)(nil), // 2: detection_tracking_system.DataResponse
+	(*Ack)(nil),          // 3: detection_tracking_system.Ack
 }
 var file_detection_tracking_pipeline_proto_depIdxs = []int32{
 	0, // 0: detection_tracking_system.DetectionTrackingPipeline.SendDataToServer:input_type -> detection_tracking_system.Data
-	0, // 1: detection_tracking_system.DetectionTrackingPipeline.ReceiveDataFromServer:input_type -> detection_tracking_system.Data
-	0, // 2: detection_tracking_system.DetectionTrackingPipeline.CheckConnection:input_type -> detection_tracking_system.Data
-	2, // 3: detection_tracking_system.DetectionTrackingPipeline.SendDataToServer:output_type -> detection_tracking_system.Ack
-	1, // 4: detection_tracking_system.DetectionTrackingPipeline.ReceiveDataFromServer:output_type -> detection_tracking_system.DataResponse
-	2, // 5: detection_tracking_system.DetectionTrackingPipeline.CheckConnection:output_type -> detection_tracking_system.Ack
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
+	1, // 1: detection_tracking_system.DetectionTrackingPipeline.SendFrameServer:input_type -> detection_tracking_system.FrameData
+	0, // 2: detection_tracking_system.DetectionTrackingPipeline.ReceiveDataFromServer:input_type -> detection_tracking_system.Data
+	0, // 3: detection_tracking_system.DetectionTrackingPipeline.CheckConnection:input_type -> detection_tracking_system.Data
+	3, // 4: detection_tracking_system.DetectionTrackingPipeline.SendDataToServer:output_type -> detection_tracking_system.Ack
+	3, // 5: detection_tracking_system.DetectionTrackingPipeline.SendFrameServer:output_type -> detection_tracking_system.Ack
+	2, // 6: detection_tracking_system.DetectionTrackingPipeline.ReceiveDataFromServer:output_type -> detection_tracking_system.DataResponse
+	3, // 7: detection_tracking_system.DetectionTrackingPipeline.CheckConnection:output_type -> detection_tracking_system.Ack
+	4, // [4:8] is the sub-list for method output_type
+	0, // [0:4] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -275,7 +344,7 @@ func file_detection_tracking_pipeline_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_detection_tracking_pipeline_proto_rawDesc), len(file_detection_tracking_pipeline_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
