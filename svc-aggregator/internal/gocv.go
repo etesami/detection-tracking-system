@@ -1,8 +1,6 @@
 package internal
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"image"
 	"log"
@@ -11,8 +9,6 @@ import (
 	"time"
 
 	api "github.com/etesami/detection-tracking-system/api"
-	pb "github.com/etesami/detection-tracking-system/pkg/protoc"
-	"github.com/etesami/detection-tracking-system/pkg/utils"
 
 	"gocv.io/x/gocv"
 )
@@ -245,37 +241,4 @@ func (vi *VideoInput) Close() {
 	}
 
 	log.Println("VideoInput closed.")
-}
-
-// SendFrame sends a frame to the tracker service
-func SendFrame(f api.FrameData, frameByte []byte, clientRef *atomic.Value, dstSvcName string) error {
-	clientIface := clientRef.Load()
-	if clientIface == nil {
-		return fmt.Errorf("client is not initialized")
-	}
-	client := clientIface.(pb.DetectionTrackingPipelineClient)
-
-	meta := api.FrameData{
-		SourceId:  f.SourceId,
-		FrameId:   f.FrameId,
-		Timestamp: f.Timestamp,
-	}
-	metaByte, _ := json.Marshal(meta)
-
-	d := &pb.FrameData{
-		FrameData:     frameByte,
-		Metadata:      string(metaByte),
-		SentTimestamp: time.Now().Format(time.RFC3339Nano),
-	}
-
-	pong, err := client.SendFrameToServer(context.Background(), d)
-	if err != nil {
-		return fmt.Errorf("error sending frame to server: %v", err)
-	}
-	rtt, err := utils.CalculateRtt(d.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, time.Now().Format(time.RFC3339Nano))
-	if err != nil {
-		return fmt.Errorf("error calculating RTT: %v", err)
-	}
-	log.Printf("Sent frame [%d], [%s] response: [%s], RTT [%.2f] ms\n", f.FrameId, dstSvcName, pong.Status, float64(rtt)/1000.0)
-	return nil
 }

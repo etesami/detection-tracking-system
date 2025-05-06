@@ -80,7 +80,7 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 			FrameData:     recData.FrameData,
 			SentTimestamp: time.Now().Format(time.RFC3339Nano), // the current timestamp
 		}
-		pong, err := c.SendFrameToServer(context.Background(), &d)
+		pong, err := c.SendDetectedFrameToServer(context.Background(), &d)
 		if err != nil {
 			log.Printf("error sending frame to server: %v", err)
 		}

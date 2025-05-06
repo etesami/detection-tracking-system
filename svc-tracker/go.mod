@@ -1,11 +1,10 @@
-module github.com/etesami/detection-tracking-system/svc-aggregator
+module github.com/etesami/detection-tracking-system/svc-tracker
 
 go 1.23.8
 
 require (
 	github.com/etesami/detection-tracking-system v0.0.0-20250506154950-5f4a57ea1525
 	github.com/prometheus/client_golang v1.22.0
-	gocv.io/x/gocv v0.41.0
 	google.golang.org/grpc v1.72.0
 )
 
@@ -16,6 +15,7 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
+	gocv.io/x/gocv v0.41.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
