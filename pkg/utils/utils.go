@@ -18,16 +18,17 @@ import (
 )
 
 // calculateRtt calculates the round-trip time (RTT) based on the current time and the ack time
-// All timestamps are in time.Time format
-func CalculateRtt(msgSentTime, msgRecTime, ackSentTime, ackRecTime time.Time) (float64, error) {
-	// msgSentTime1, err1 := time.Parse(time.RFC3339, msgSentTime)
-	// msgRecTime1, err2 := time.Parse(time.RFC3339, msgRecTime)
-	// ackSentTime1, err3 := time.Parse(time.RFC3339, ackSentTime)
-	// if err1 != nil || err2 != nil || err3 != nil {
-	// 	return -1, fmt.Errorf("error parsing timestamps: (%v, %v, %v)", err1, err2, err3)
-	// }
-	t1 := msgRecTime.Sub(msgSentTime)
-	t2 := ackRecTime.Sub(ackSentTime)
+// All timestamps are in RFC3339Nano format
+func CalculateRtt(msgSentTime, msgRecTime, ackSentTime, ackRecTime string) (float64, error) {
+	msgSentTime1, err1 := time.Parse(time.RFC3339Nano, msgSentTime)
+	msgRecTime1, err2 := time.Parse(time.RFC3339Nano, msgRecTime)
+	ackSentTime1, err3 := time.Parse(time.RFC3339Nano, ackSentTime)
+	ackRecTime1, err4 := time.Parse(time.RFC3339Nano, ackRecTime)
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+		return -1, fmt.Errorf("error parsing timestamps: (%v, %v, %v)", err1, err2, err3)
+	}
+	t1 := msgRecTime1.Sub(msgSentTime1)
+	t2 := ackRecTime1.Sub(ackSentTime1)
 	rtt := float64(t1+t2) / 1000.0
 	return rtt, nil
 }
