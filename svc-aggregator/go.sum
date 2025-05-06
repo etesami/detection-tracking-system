@@ -10,6 +10,12 @@ github.com/etesami/detection-tracking-system v0.0.0-20250505085445-41d748571dd1 
 github.com/etesami/detection-tracking-system v0.0.0-20250505085445-41d748571dd1/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
 github.com/etesami/detection-tracking-system v0.0.0-20250505090712-fc850a8897da h1:WcWWhA7cjvnROKAGSlEBB2OplCm59oR6to01Gl7miiU=
 github.com/etesami/detection-tracking-system v0.0.0-20250505090712-fc850a8897da/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
+github.com/etesami/detection-tracking-system v0.0.0-20250506053123-a31b9287231c h1:3AKEBZ6d0ojTfXTuwzQVIUDUYgV26TqoUQ1BcBM75L4=
+github.com/etesami/detection-tracking-system v0.0.0-20250506053123-a31b9287231c/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
+github.com/etesami/detection-tracking-system v0.0.0-20250506053405-28de94b83514 h1:/X4J/6ibZ69HKWiZxXDOyDgtWI2Lj4vu8Qbeq1jl6OI=
+github.com/etesami/detection-tracking-system v0.0.0-20250506053405-28de94b83514/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
+github.com/etesami/detection-tracking-system v0.0.0-20250506062754-a2b9821d033c h1:4K11H46WidRlYeKA/P3ibMVIg/C7ESUUyr3elUkAOXM=
+github.com/etesami/detection-tracking-system v0.0.0-20250506062754-a2b9821d033c/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=

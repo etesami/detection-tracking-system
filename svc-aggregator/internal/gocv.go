@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"image"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	api "github.com/etesami/detection-tracking-system/api"
 	pb "github.com/etesami/detection-tracking-system/pkg/protoc"
 	"github.com/etesami/detection-tracking-system/pkg/utils"
 
@@ -42,7 +44,7 @@ type VideoInput struct {
 	config          *Config
 	grpcDtClientRef *atomic.Value
 	grpcTrClientRef *atomic.Value
-	queue           chan gocv.Mat // Channel for frames
+	queue           chan api.FrameData // Channel for frames
 	Signal          signal
 	frameCount      int
 	frameProcessed  int
@@ -65,7 +67,7 @@ func NewVideoInput(config *Config, dtClient, trClient *atomic.Value) (*VideoInpu
 		config:          config,
 		grpcDtClientRef: dtClient,
 		grpcTrClientRef: trClient,
-		queue:           make(chan gocv.Mat, config.QueueSize),
+		queue:           make(chan api.FrameData, config.QueueSize),
 		Signal:          signal{Done: make(chan struct{})},
 		capture:         capture,
 		frameCount:      0,
@@ -117,8 +119,15 @@ func (vi *VideoInput) readFrames() {
 			resized := gocv.NewMat()
 			gocv.Resize(img, &resized, image.Pt(vi.config.ImageWidth, vi.config.ImageHeight), 0, 0, gocv.InterpolationDefault)
 
+			frameData := api.FrameData{
+				Timestamp: time.Now(),
+				SourceId:  vi.config.VideoSource,
+				FrameId:   vi.capture.Get(gocv.VideoCapturePosFrames),
+				Frame:     resized,
+			}
+
 			select {
-			case vi.queue <- resized:
+			case vi.queue <- frameData:
 				vi.frameCount++
 			case <-vi.Signal.Done:
 				log.Println("Stopping video input processing")
@@ -158,7 +167,7 @@ func (vi *VideoInput) processFrames() {
 	defer vi.wg.Done()
 	for {
 		select {
-		case frame, ok := <-vi.queue:
+		case f, ok := <-vi.queue:
 			if !ok {
 				log.Printf("frame queue closed")
 				return
@@ -173,20 +182,35 @@ func (vi *VideoInput) processFrames() {
 			// log.Printf("Frame [%d] proccessed.\n", vi.frameProcessed+1)
 			// }
 
-			buf, err := gocv.IMEncode(".jpg", frame)
+			buf, err := gocv.IMEncode(".jpg", f.Frame)
 			if err != nil {
 				log.Printf("Failed to encode frame: %v", err)
 				vi.frameSkipped++
-			} else {
-				// Send the frame to the remote service using gRPC
-				if err := SendFrame(buf.GetBytes(), vi.grpcDtClientRef, "detector"); err != nil {
-					log.Printf("failed to send frame: %v", err)
-				} else {
-					vi.frameProcessed++
-				}
+				f.Frame.Close()
+				continue
 			}
+
+			var (
+				client  = vi.grpcTrClientRef
+				service = "tracker"
+			)
+
+			// Alternate between sending to the tracker and detector
+			if vi.frameCount%vi.config.DetectionFrequency == 0 {
+				client = vi.grpcDtClientRef
+				service = "detector"
+			}
+
+			// Send the frame to the remote service using gRPC
+			if err := SendFrame(f, buf.GetBytes(), client, service); err != nil {
+				log.Printf("failed to send frame: %v", err)
+				vi.frameSkipped++
+			} else {
+				vi.frameProcessed++
+			}
+
 			buf.Close()
-			frame.Close()
+			f.Frame.Close() // Close the frame after processing
 
 		case <-vi.Signal.Done:
 			// Closding frame will be handled in the Close method
@@ -216,34 +240,42 @@ func (vi *VideoInput) Close() {
 
 	log.Printf("  Closing vi.queue channel...")
 	close(vi.queue) // close channel so there are no more frames will be added to the queue
-	for frame := range vi.queue {
-		frame.Close() // cleanup frames left in the queue
+	for f := range vi.queue {
+		f.Frame.Close() // cleanup frames left in the queue
 	}
 
 	log.Println("VideoInput closed.")
 }
 
-// SendFrame sends a frame to the remote service
-func SendFrame(frame []byte, clientRef *atomic.Value, dstSvcName string) error {
+// SendFrame sends a frame to the tracker service
+func SendFrame(f api.FrameData, frameByte []byte, clientRef *atomic.Value, dstSvcName string) error {
 	clientIface := clientRef.Load()
 	if clientIface == nil {
 		return fmt.Errorf("client is not initialized")
 	}
 	client := clientIface.(pb.DetectionTrackingPipelineClient)
 
-	f := &pb.FrameData{
-		FrameData:     frame,
-		SentTimestamp: fmt.Sprintf("%d", int(time.Now().UnixMilli())),
+	meta := map[string]string{
+		"SourceId":  f.SourceId,
+		"FrameId":   fmt.Sprintf("%f", f.FrameId),
+		"Timestamp": f.Timestamp.Format(time.RFC3339),
+	}
+	metaByte, _ := json.Marshal(meta)
+
+	d := &pb.FrameData{
+		FrameData:     frameByte,
+		Metadata:      string(metaByte),
+		SentTimestamp: time.Now().Format(time.RFC3339),
 	}
 
-	pong, err := client.SendFrameServer(context.Background(), f)
+	pong, err := client.SendFrameToServer(context.Background(), d)
 	if err != nil {
 		return fmt.Errorf("error sending frame to server: %v", err)
 	}
-	rtt, err := utils.CalculateRtt(f.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, time.Now())
+	rtt, err := utils.CalculateRtt(d.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, time.Now())
 	if err != nil {
 		return fmt.Errorf("error calculating RTT: %v", err)
 	}
-	log.Printf("Server [%s] response: [%s], RTT [%.2f] ms\n", dstSvcName, pong.Status, float64(rtt)/1000.0)
+	log.Printf("Sent frame [%f], [%s] response: [%s], RTT [%.2f] ms\n", f.FrameId, dstSvcName, pong.Status, float64(rtt)/1000.0)
 	return nil
 }

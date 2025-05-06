@@ -9,10 +9,10 @@ import (
 )
 
 type FrameData struct {
-	Timestamp time.Time
-	SourceId  string
-	FrameId   float64
-	Frame     gocv.Mat
+	Timestamp time.Time `json:"timestamp,omitempty"`
+	SourceId  string    `json:"source_id,omitempty"`
+	FrameId   int64     `json:"frame_id,omitempty"`
+	Frame     gocv.Mat  `json:"frame,omitempty"`
 }
 
 type Service struct {
