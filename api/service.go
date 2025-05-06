@@ -4,7 +4,16 @@ import (
 	"fmt"
 	"net"
 	"time"
+
+	"gocv.io/x/gocv"
 )
+
+type FrameData struct {
+	Timestamp time.Time
+	SourceId  string
+	FrameId   float64
+	Frame     gocv.Mat
+}
 
 type Service struct {
 	Address string
