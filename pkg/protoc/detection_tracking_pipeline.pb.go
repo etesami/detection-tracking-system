@@ -291,10 +291,11 @@ const file_detection_tracking_pipeline_proto_rawDesc = "" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x126\n" +
 	"\x17original_sent_timestamp\x18\x02 \x01(\tR\x15originalSentTimestamp\x12-\n" +
 	"\x12received_timestamp\x18\x03 \x01(\tR\x11receivedTimestamp\x12,\n" +
-	"\x12ack_sent_timestamp\x18\x04 \x01(\tR\x10ackSentTimestamp2\x82\x03\n" +
+	"\x12ack_sent_timestamp\x18\x04 \x01(\tR\x10ackSentTimestamp2\xe5\x03\n" +
 	"\x19DetectionTrackingPipeline\x12S\n" +
 	"\x10SendDataToServer\x12\x1f.detection_tracking_system.Data\x1a\x1e.detection_tracking_system.Ack\x12Y\n" +
 	"\x11SendFrameToServer\x12$.detection_tracking_system.FrameData\x1a\x1e.detection_tracking_system.Ack\x12a\n" +
+	"\x19SendDetectedFrameToServer\x12$.detection_tracking_system.FrameData\x1a\x1e.detection_tracking_system.Ack\x12a\n" +
 	"\x15ReceiveDataFromServer\x12\x1f.detection_tracking_system.Data\x1a'.detection_tracking_system.DataResponse\x12R\n" +
 	"\x0fCheckConnection\x12\x1f.detection_tracking_system.Data\x1a\x1e.detection_tracking_system.AckB5Z3github.com/etesami/detection-tracking-system/protocb\x06proto3"
 
@@ -320,14 +321,16 @@ var file_detection_tracking_pipeline_proto_goTypes = []any{
 var file_detection_tracking_pipeline_proto_depIdxs = []int32{
 	0, // 0: detection_tracking_system.DetectionTrackingPipeline.SendDataToServer:input_type -> detection_tracking_system.Data
 	1, // 1: detection_tracking_system.DetectionTrackingPipeline.SendFrameToServer:input_type -> detection_tracking_system.FrameData
-	0, // 2: detection_tracking_system.DetectionTrackingPipeline.ReceiveDataFromServer:input_type -> detection_tracking_system.Data
-	0, // 3: detection_tracking_system.DetectionTrackingPipeline.CheckConnection:input_type -> detection_tracking_system.Data
-	3, // 4: detection_tracking_system.DetectionTrackingPipeline.SendDataToServer:output_type -> detection_tracking_system.Ack
-	3, // 5: detection_tracking_system.DetectionTrackingPipeline.SendFrameToServer:output_type -> detection_tracking_system.Ack
-	2, // 6: detection_tracking_system.DetectionTrackingPipeline.ReceiveDataFromServer:output_type -> detection_tracking_system.DataResponse
-	3, // 7: detection_tracking_system.DetectionTrackingPipeline.CheckConnection:output_type -> detection_tracking_system.Ack
-	4, // [4:8] is the sub-list for method output_type
-	0, // [0:4] is the sub-list for method input_type
+	1, // 2: detection_tracking_system.DetectionTrackingPipeline.SendDetectedFrameToServer:input_type -> detection_tracking_system.FrameData
+	0, // 3: detection_tracking_system.DetectionTrackingPipeline.ReceiveDataFromServer:input_type -> detection_tracking_system.Data
+	0, // 4: detection_tracking_system.DetectionTrackingPipeline.CheckConnection:input_type -> detection_tracking_system.Data
+	3, // 5: detection_tracking_system.DetectionTrackingPipeline.SendDataToServer:output_type -> detection_tracking_system.Ack
+	3, // 6: detection_tracking_system.DetectionTrackingPipeline.SendFrameToServer:output_type -> detection_tracking_system.Ack
+	3, // 7: detection_tracking_system.DetectionTrackingPipeline.SendDetectedFrameToServer:output_type -> detection_tracking_system.Ack
+	2, // 8: detection_tracking_system.DetectionTrackingPipeline.ReceiveDataFromServer:output_type -> detection_tracking_system.DataResponse
+	3, // 9: detection_tracking_system.DetectionTrackingPipeline.CheckConnection:output_type -> detection_tracking_system.Ack
+	5, // [5:10] is the sub-list for method output_type
+	0, // [0:5] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
