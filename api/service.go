@@ -4,15 +4,12 @@ import (
 	"fmt"
 	"net"
 	"time"
-
-	"gocv.io/x/gocv"
 )
 
-type FrameData struct {
-	Timestamp string   `json:"timestamp,omitempty"`
-	SourceId  string   `json:"source_id,omitempty"`
-	FrameId   int64    `json:"frame_id,omitempty"`
-	Frame     gocv.Mat `json:"frame,omitempty"`
+type FrameMetadata struct {
+	Timestamp string `json:"timestamp,omitempty"`
+	SourceId  string `json:"source_id,omitempty"`
+	FrameId   int64  `json:"frame_id,omitempty"`
 }
 
 type Service struct {
