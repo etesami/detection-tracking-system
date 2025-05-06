@@ -47,7 +47,6 @@ type VideoInput struct {
 	frameCount      int
 	frameProcessed  int
 	frameSkipped    int
-	emptyFrames     int
 	capture         *gocv.VideoCapture
 	wg              sync.WaitGroup // WaitGroup to wait for goroutines to finish
 }
@@ -70,7 +69,6 @@ func NewVideoInput(config *Config, dtClient, trClient *atomic.Value) (*VideoInpu
 		Signal:          signal{Done: make(chan struct{})},
 		capture:         capture,
 		frameCount:      0,
-		emptyFrames:     0,
 	}
 
 	vi.wg.Add(2) // Add 2 to the WaitGroup for readFrames and processFrames
@@ -104,7 +102,7 @@ func (vi *VideoInput) readFrames() {
 			if ok := vi.capture.Read(&img); !ok || img.Empty() {
 				log.Println("Error reading frame")
 				emptyFrames++
-				if vi.emptyFrames > 10 {
+				if emptyFrames > 10 {
 					log.Println("Too many empty frames, stopping video input")
 					vi.Signal.Close() // Signal to stop processing and clean up
 					return
@@ -145,7 +143,7 @@ func (vi *VideoInput) readFrames() {
 				time.Sleep(time.Duration(sleepDuration) * time.Second)
 			}
 
-			if vi.frameCount >= vi.config.MaxTotalFrames {
+			if vi.config.MaxTotalFrames > 0 && vi.frameCount >= vi.config.MaxTotalFrames {
 				log.Printf("Stopping video input processing after [%d] frames\n", vi.frameCount)
 				vi.Signal.Close()
 				return
@@ -166,25 +164,29 @@ func (vi *VideoInput) processFrames() {
 				return
 			}
 
-			if vi.frameProcessed%100 == 0 {
-				timestamp := time.Now().UnixNano()
-				filename := fmt.Sprintf("/tmp/imgs/output_%d.jpg", timestamp)
-				if ok := gocv.IMWrite(filename, frame); !ok {
-					log.Printf("Failed to write frame to file")
-				}
-				log.Printf("Frame [%d] proccessed.\n", vi.frameProcessed+1)
-			}
-			frame.Close()
-			vi.frameProcessed++
-			// buf, err := gocv.IMEncode(".jpg", frame)
-			// if err != nil {
-			// 	return fmt.Errorf("failed to encode frame: %v", err)
+			// if vi.frameProcessed%200 == 0 {
+			// timestamp := time.Now().UnixNano()
+			// filename := fmt.Sprintf("/tmp/imgs/output_%d.jpg", timestamp)
+			// if ok := gocv.IMWrite(filename, frame); !ok {
+			// 	log.Printf("Failed to write frame to file")
 			// }
-			// defer buf.Close()
+			// log.Printf("Frame [%d] proccessed.\n", vi.frameProcessed+1)
+			// }
 
-			// if err := SendFrame(buf.GetBytes(), vi.grpcDtClientRef); err != nil {
-			// 	return fmt.Errorf("failed to send frame: %v", err)
-			// }
+			buf, err := gocv.IMEncode(".jpg", frame)
+			if err != nil {
+				log.Printf("Failed to encode frame: %v", err)
+				vi.frameSkipped++
+			} else {
+				// Send the frame to the remote service using gRPC
+				if err := SendFrame(buf.GetBytes(), vi.grpcDtClientRef, "detector"); err != nil {
+					log.Printf("failed to send frame: %v", err)
+				} else {
+					vi.frameProcessed++
+				}
+			}
+			buf.Close()
+			frame.Close()
 
 		case <-vi.Signal.Done:
 			// Closding frame will be handled in the Close method
@@ -222,7 +224,7 @@ func (vi *VideoInput) Close() {
 }
 
 // SendFrame sends a frame to the remote service
-func SendFrame(frame []byte, clientRef *atomic.Value) error {
+func SendFrame(frame []byte, clientRef *atomic.Value, dstSvcName string) error {
 	clientIface := clientRef.Load()
 	if clientIface == nil {
 		return fmt.Errorf("client is not initialized")
@@ -242,6 +244,6 @@ func SendFrame(frame []byte, clientRef *atomic.Value) error {
 	if err != nil {
 		return fmt.Errorf("error calculating RTT: %v", err)
 	}
-	log.Printf("Server response: [%s], RTT [%.2f] ms\n", pong.Status, float64(rtt)/1000.0)
+	log.Printf("Server [%s] response: [%s], RTT [%.2f] ms\n", dstSvcName, pong.Status, float64(rtt)/1000.0)
 	return nil
 }

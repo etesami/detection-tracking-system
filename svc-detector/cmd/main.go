@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"sync/atomic"
 	"syscall"
 
@@ -16,7 +15,8 @@ import (
 	metric "github.com/etesami/detection-tracking-system/pkg/metric"
 	pb "github.com/etesami/detection-tracking-system/pkg/protoc"
 	utils "github.com/etesami/detection-tracking-system/pkg/utils"
-	"github.com/etesami/detection-tracking-system/svc-aggregator/internal"
+
+	"github.com/etesami/detection-tracking-system/svc-detector/internal"
 	"google.golang.org/grpc"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -31,13 +31,11 @@ func main() {
 	m := &metric.Metric{}
 	m.RegisterMetrics(sentDataBuckets, procTimeBuckets, rttTimeBuckets)
 
-	// Local service initialization (ingestion/aggregation) to receive a connection information
-	// data sources connect to this service to inform about their address and port
-	// Once the connection details are recevied, the local service will retrieve video stream over rtsp
-	svcHost := os.Getenv("SVC_INGST_ADDR")
-	svcPort := os.Getenv("SVC_INGST_PORT")
+	// Local service initialization (detector) to receive frames
+	svcHost := os.Getenv("SVC_DETECTOR_HOST")
+	svcPort := os.Getenv("SVC_DETECTOR_PORT")
 	if svcPort == "" || svcHost == "" {
-		panic("SVC_INGST_ADDR or SVC_INGST_PORT environment variable is not set")
+		panic("SVC_DETECTOR_ADDR or SVC_DETECTOR_PORT environment variable is not set")
 	}
 	localSvc := &api.Service{
 		Address: svcHost,
@@ -51,10 +49,7 @@ func main() {
 	}
 
 	s := &internal.Server{
-		Clients:        sync.Map{},
-		RegisterCh:     make(chan *api.Service, 100),
-		DtClient:       atomic.Value{},
-		TrackingClient: atomic.Value{},
+		TrackerClientRef: atomic.Value{},
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterDetectionTrackingPipelineServer(grpcServer, s)
@@ -66,32 +61,19 @@ func main() {
 		}
 	}()
 
-	// go s.ClientHandler()
-
-	// Setup the remote service (detection and tracking) and start the connection as client
-	// when we send data to the remote services when we have to
-	REMOTE_DETECTOR_HOST := os.Getenv("REMOTE_DETECTION_HOST")
-	REMOTE_DETECTOR_PORT := os.Getenv("REMOTE_DETECTION_PORT")
-	if REMOTE_DETECTOR_HOST == "" || REMOTE_DETECTOR_PORT == "" {
-		panic("REMOTE_DETECTOR_HOST or REMOTE_DETECTOR_PORT environment variable is not set")
+	// Setup the remote service (tracker) to send processed frames
+	REMOTE_TRACKER_HOST := os.Getenv("REMOTE_TRACKER_HOST")
+	REMOTE_TRACKER_PORT := os.Getenv("REMOTE_TRACKER_PORT")
+	if REMOTE_TRACKER_HOST == "" || REMOTE_TRACKER_PORT == "" {
+		panic("REMOTE_TRACKER_HOST or REMOTE_TRACKER_PORT environment variable is not set")
 	}
 
-	tarDtSvc := api.Service{
-		Address: REMOTE_DETECTOR_HOST,
-		Port:    REMOTE_DETECTOR_PORT,
+	targetSvc := api.Service{
+		Address: REMOTE_TRACKER_HOST,
+		Port:    REMOTE_TRACKER_PORT,
 	}
-	go utils.MonitorConnection(tarDtSvc, &s.DtClient)
 
-	REMOTE_TRACKING_HOST := os.Getenv("REMOTE_TRACKING_HOST")
-	REMOTE_TRACKING_PORT := os.Getenv("REMOTE_TRACKING_PORT")
-	if REMOTE_TRACKING_HOST == "" || REMOTE_TRACKING_PORT == "" {
-		panic("REMOTE_TRACKING_HOST or REMOTE_TRACKING_PORT environment variable is not set")
-	}
-	// targetTrackingSvc := api.Service{
-	// 	Address: REMOTE_TRACKING_HOST,
-	// 	Port:    REMOTE_TRACKING_PORT,
-	// }
-	// go utils.MonitorConnection(targetTrackingSvc, &s.TrackingClient)
+	go utils.MonitorConnection(targetSvc, &s.TrackerClientRef)
 
 	metricAddr := os.Getenv("METRIC_ADDR")
 	metricPort := os.Getenv("METRIC_PORT")
@@ -119,9 +101,6 @@ func main() {
 
 	<-sigChan // Wait for signal
 	log.Printf("Received shutdown signal\n")
-	for _, vi := range s.VideoInputs {
-		vi.Signal.Close()
-	}
 	// cancel()                  // Cancel the context
 	grpcServer.GracefulStop() // Stop the gRPC server gracefully
 	if err := server.Shutdown(context.Background()); err != nil {

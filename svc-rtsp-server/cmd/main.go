@@ -78,7 +78,7 @@ func main() {
 	ticker := time.NewTicker(time.Duration(updateFrequency) * time.Second)
 	defer ticker.Stop()
 
-	fmt.Printf("Update frequency: %d seconds\n", updateFrequency)
+	log.Printf("Update frequency: %d seconds\n", updateFrequency)
 	go func(m *metric.Metric, c *atomic.Value) {
 		for range ticker.C {
 			if err := internal.ProcessTicker(c, "aggregator", m, RTSP_SERVER_PORT); err != nil {

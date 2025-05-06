@@ -17,10 +17,10 @@ import (
 type Server struct {
 	pb.UnimplementedDetectionTrackingPipelineServer
 
-	Clients         sync.Map // map[string]*Service
-	VideoInputs     []*VideoInput
-	DetectionClient atomic.Value
-	TrackingClient  atomic.Value
+	Clients        sync.Map // map[string]*Service
+	VideoInputs    []*VideoInput
+	DtClient       atomic.Value
+	TrackingClient atomic.Value
 
 	// Channel for a new client
 	RegisterCh chan *api.Service
@@ -42,12 +42,12 @@ func (s *Server) AddClient(address, port string) {
 			VideoSource:        fmt.Sprintf("rtsp://%s:%s/stream", address, port),
 			QueueSize:          100,
 			FrameRate:          30,
-			MaxTotalFrames:     500,
+			MaxTotalFrames:     -1, // -1 means no limit
 			DetectionFrequency: 20,
 			ImageWidth:         640,
 			ImageHeight:        360,
 		}
-		if vi, err := NewVideoInput(&cfg, &s.DetectionClient, &s.TrackingClient); err != nil {
+		if vi, err := NewVideoInput(&cfg, &s.DtClient, &s.TrackingClient); err != nil {
 			log.Printf("Error creating video input: %v\n", err)
 			return
 		} else {
