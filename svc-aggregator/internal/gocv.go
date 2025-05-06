@@ -120,9 +120,9 @@ func (vi *VideoInput) readFrames() {
 			gocv.Resize(img, &resized, image.Pt(vi.config.ImageWidth, vi.config.ImageHeight), 0, 0, gocv.InterpolationDefault)
 
 			frameData := api.FrameData{
-				Timestamp: time.Now(),
+				Timestamp: time.Now().Format(time.RFC3339Nano),
 				SourceId:  vi.config.VideoSource,
-				FrameId:   vi.capture.Get(gocv.VideoCapturePosFrames),
+				FrameId:   int64(vi.capture.Get(gocv.VideoCapturePosFrames)),
 				Frame:     resized,
 			}
 
@@ -255,27 +255,27 @@ func SendFrame(f api.FrameData, frameByte []byte, clientRef *atomic.Value, dstSv
 	}
 	client := clientIface.(pb.DetectionTrackingPipelineClient)
 
-	meta := map[string]string{
-		"SourceId":  f.SourceId,
-		"FrameId":   fmt.Sprintf("%f", f.FrameId),
-		"Timestamp": f.Timestamp.Format(time.RFC3339),
+	meta := api.FrameData{
+		SourceId:  f.SourceId,
+		FrameId:   f.FrameId,
+		Timestamp: f.Timestamp,
 	}
 	metaByte, _ := json.Marshal(meta)
 
 	d := &pb.FrameData{
 		FrameData:     frameByte,
 		Metadata:      string(metaByte),
-		SentTimestamp: time.Now().Format(time.RFC3339),
+		SentTimestamp: time.Now().Format(time.RFC3339Nano),
 	}
 
 	pong, err := client.SendFrameToServer(context.Background(), d)
 	if err != nil {
 		return fmt.Errorf("error sending frame to server: %v", err)
 	}
-	rtt, err := utils.CalculateRtt(d.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, time.Now())
+	rtt, err := utils.CalculateRtt(d.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, time.Now().Format(time.RFC3339Nano))
 	if err != nil {
 		return fmt.Errorf("error calculating RTT: %v", err)
 	}
-	log.Printf("Sent frame [%f], [%s] response: [%s], RTT [%.2f] ms\n", f.FrameId, dstSvcName, pong.Status, float64(rtt)/1000.0)
+	log.Printf("Sent frame [%d], [%s] response: [%s], RTT [%.2f] ms\n", f.FrameId, dstSvcName, pong.Status, float64(rtt)/1000.0)
 	return nil
 }

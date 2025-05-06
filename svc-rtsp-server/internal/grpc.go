@@ -34,7 +34,7 @@ func ProcessTicker(clientRef *atomic.Value, serverName string, metricList *metri
 	go func(m *metric.Metric) {
 		ping := &pb.Data{
 			Payload:       fmt.Sprintf("%s:%s", ip, rtspPort),
-			SentTimestamp: fmt.Sprintf("%d", int(time.Now().UnixMilli())),
+			SentTimestamp: time.Now().Format(time.RFC3339Nano),
 		}
 		pong, err := client.SendDataToServer(context.Background(), ping)
 		// in case the target service is not reachable anymore we should just return
@@ -42,7 +42,7 @@ func ProcessTicker(clientRef *atomic.Value, serverName string, metricList *metri
 			log.Printf("Error sending data to server: %v", err)
 			return
 		}
-		rtt, err := utils.CalculateRtt(ping.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, time.Now())
+		rtt, err := utils.CalculateRtt(ping.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, time.Now().Format(time.RFC3339Nano))
 		if err != nil {
 			log.Printf("Error calculating RTT: %v", err)
 			return

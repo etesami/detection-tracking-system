@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -70,9 +69,9 @@ func (s *Server) RemoveClient(address, port string) {
 
 // SendDataToServer handles incoming data from clients
 func (s *Server) SendDataToServer(ctx context.Context, recData *pb.Data) (*pb.Ack, error) {
-	st := time.Now()
-	recTimestamp := st.UnixMilli()
-	log.Printf("Received at [%s]: [%d]\n", st.Format("2006-01-02 15:04:05"), len(recData.Payload))
+	recTime := time.Now().Format(time.RFC3339Nano)
+	// recTimestamp := st.UnixMilli()
+	log.Printf("Received at [%s]: [%d]\n", recTime, len(recData.Payload))
 
 	// Expect the message to be in the format of host:ip
 	parts := strings.Split(recData.Payload, ":")
@@ -87,8 +86,8 @@ func (s *Server) SendDataToServer(ctx context.Context, recData *pb.Data) (*pb.Ac
 	ack := &pb.Ack{
 		Status:                "ok",
 		OriginalSentTimestamp: recData.SentTimestamp,
-		ReceivedTimestamp:     strconv.Itoa(int(recTimestamp)),
-		AckSentTimestamp:      strconv.Itoa(int(time.Now().UnixMilli())),
+		ReceivedTimestamp:     recTime,
+		AckSentTimestamp:      time.Now().Format(time.RFC3339Nano),
 	}
 
 	return ack, nil

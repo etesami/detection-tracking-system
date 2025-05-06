@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync/atomic"
 	"syscall"
 
@@ -48,8 +49,20 @@ func main() {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
+	width, _ := strconv.Atoi(os.Getenv("IMAGE_WIDTH"))
+	height, _ := strconv.Atoi(os.Getenv("IMAGE_HEIGHT"))
+	saveImageFrq, _ := strconv.Atoi(os.Getenv("SAVE_IMAGE_FREQUENCY"))
+
 	s := &internal.Server{
 		TrackerClientRef: atomic.Value{},
+		DtConfig: &internal.DtConfig{
+			Model:              os.Getenv("YOLO_MODEL"),
+			ImageWidth:         width,
+			ImageHeight:        height,
+			SaveImage:          os.Getenv("SAVE_IMAGE") == "true",
+			SaveImagePath:      os.Getenv("SAVE_IMAGE_PATH"),
+			SaveImageFrequency: saveImageFrq,
+		},
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterDetectionTrackingPipelineServer(grpcServer, s)

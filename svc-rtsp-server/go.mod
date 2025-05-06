@@ -6,7 +6,7 @@ require (
 	github.com/asticode/go-astits v1.13.0
 	github.com/bluenviron/gortsplib/v4 v4.13.1
 	github.com/bluenviron/mediacommon/v2 v2.1.0
-	github.com/etesami/detection-tracking-system v0.0.0-20250505090712-fc850a8897da
+	github.com/etesami/detection-tracking-system v0.0.0-20250506151240-8ee7c89db331
 	github.com/prometheus/client_golang v1.22.0
 )
 
@@ -23,6 +23,7 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
+	gocv.io/x/gocv v0.41.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect

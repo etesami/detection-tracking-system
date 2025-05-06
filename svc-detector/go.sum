@@ -6,6 +6,16 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/etesami/detection-tracking-system v0.0.0-20250505230458-1c0e5118a33e h1:7wzlS0uFxfbgI9ooz83nMkFEl++/uFyIR6vPMalUWsk=
 github.com/etesami/detection-tracking-system v0.0.0-20250505230458-1c0e5118a33e/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
+github.com/etesami/detection-tracking-system v0.0.0-20250506053123-a31b9287231c h1:3AKEBZ6d0ojTfXTuwzQVIUDUYgV26TqoUQ1BcBM75L4=
+github.com/etesami/detection-tracking-system v0.0.0-20250506053123-a31b9287231c/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
+github.com/etesami/detection-tracking-system v0.0.0-20250506053405-28de94b83514 h1:/X4J/6ibZ69HKWiZxXDOyDgtWI2Lj4vu8Qbeq1jl6OI=
+github.com/etesami/detection-tracking-system v0.0.0-20250506053405-28de94b83514/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
+github.com/etesami/detection-tracking-system v0.0.0-20250506062754-a2b9821d033c h1:4K11H46WidRlYeKA/P3ibMVIg/C7ESUUyr3elUkAOXM=
+github.com/etesami/detection-tracking-system v0.0.0-20250506062754-a2b9821d033c/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
+github.com/etesami/detection-tracking-system v0.0.0-20250506071638-c1f7e5674cef h1:PGKQSuITMO5WNf73mpHSHN0J4NKBS9S7SgTgsjjKxMU=
+github.com/etesami/detection-tracking-system v0.0.0-20250506071638-c1f7e5674cef/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
+github.com/etesami/detection-tracking-system v0.0.0-20250506151240-8ee7c89db331 h1:Z8kpS83ygjpj2w2UBj+VJJShWLiGdpffw0AlMPxxLXA=
+github.com/etesami/detection-tracking-system v0.0.0-20250506151240-8ee7c89db331/go.mod h1:ot8/XI/PIhScWPLLNY0bO6ya96PzIdO/5CU/s3FeEiM=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
@@ -46,6 +56,8 @@ go.opentelemetry.io/otel/sdk/metric v1.34.0 h1:5CeK9ujjbFVL5c1PhLuStg1wxA7vQv7ce
 go.opentelemetry.io/otel/sdk/metric v1.34.0/go.mod h1:jQ/r8Ze28zRKoNRdkjCZxfs6YvBTG1+YIqyFVFYec5w=
 go.opentelemetry.io/otel/trace v1.34.0 h1:+ouXS2V8Rd4hp4580a8q23bg0azF2nI8cqLYnC8mh/k=
 go.opentelemetry.io/otel/trace v1.34.0/go.mod h1:Svm7lSjQD7kG7KJ/MUHPVXSDGz2OX4h0M2jHBhmSfRE=
+gocv.io/x/gocv v0.41.0 h1:KM+zRXUP28b6dHfhy+4JxDODbCNQNtLg8kio+YE7TqA=
+gocv.io/x/gocv v0.41.0/go.mod h1:zYdWMj29WAEznM3Y8NsU3A0TRq/wR/cy75jeUypThqU=
 golang.org/x/net v0.35.0 h1:T5GQRQb2y08kTAByq9L4/bz8cipCdA8FbRTXewonqY8=
 golang.org/x/net v0.35.0/go.mod h1:EglIi67kWsHKlRzzVMUD93VMSWGFOMSZgxFjparz1Qk=
 golang.org/x/sys v0.30.0 h1:QjkSwP/36a20jFYWkSue1YwXzLmsV5Gfq7Eiy72C1uc=
