@@ -6,6 +6,7 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -74,6 +75,58 @@ func GetOutboundIP() (string, error) {
 	return localAddr.IP.String(), nil
 }
 
+type GrpcClient struct {
+	mu     sync.Mutex
+	client pb.DetectionTrackingPipelineClient
+}
+
+func (g *GrpcClient) Store(client pb.DetectionTrackingPipelineClient) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.client = client
+}
+
+func (g *GrpcClient) Load() pb.DetectionTrackingPipelineClient {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.client
+}
+
+func MonitorConnection1(targetSvc api.Service, clientRef *GrpcClient) {
+	var conn *grpc.ClientConn
+
+	for {
+		if err := targetSvc.ServiceReachable(); err != nil {
+			if conn != nil {
+				conn.Close()
+			}
+			clientRef.Store(nil)
+			log.Printf("Target service [%s:%s] is not reachable: %v", targetSvc.Address, targetSvc.Port, err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		if conn == nil || conn.GetState().String() != "READY" {
+			if conn != nil {
+				conn.Close()
+			}
+			newConn, err := grpc.NewClient(
+				targetSvc.Address+":"+targetSvc.Port,
+				grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				log.Println("Failed to connect:", err)
+				time.Sleep(5 * time.Second)
+				continue
+			}
+
+			conn = newConn
+			client := pb.NewDetectionTrackingPipelineClient(conn)
+			clientRef.Store(client)
+		}
+		time.Sleep(5 * time.Second)
+	}
+}
+
 func MonitorConnection(targetSvc api.Service, clientRef *atomic.Value) {
 	var conn *grpc.ClientConn
 
@@ -82,6 +135,7 @@ func MonitorConnection(targetSvc api.Service, clientRef *atomic.Value) {
 			if conn != nil {
 				conn.Close()
 			}
+			clientRef.Store(nil)
 			log.Printf("Target service [%s:%s] is not reachable: %v", targetSvc.Address, targetSvc.Port, err)
 			time.Sleep(5 * time.Second)
 			continue
