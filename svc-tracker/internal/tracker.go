@@ -3,9 +3,10 @@ package internal
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+
+	// "fmt"
 	"image"
-	"image/color"
+	// "image/color"
 	"log"
 	"sync"
 	"time"
@@ -41,8 +42,6 @@ type DtConfig struct {
 // AddClient adds a new client connection data to the server
 // and starts a new video input stream for that client
 func (s *Server) AddDetections(sourceId string, frame []byte, detections []image.Rectangle) {
-	// Check if the client already exists
-	trClientIf, found := s.Trackers.Load(sourceId)
 
 	imgMat, err := gocv.IMDecode(frame, gocv.IMReadColor)
 	if err != nil {
@@ -51,68 +50,71 @@ func (s *Server) AddDetections(sourceId string, frame []byte, detections []image
 	}
 	defer imgMat.Close()
 
-	// The maximum number of detections to track: 200
-	matches := make(map[int]int, 200)
-	notMatched := []int{}
+	// // Check if the client already exists
+	// trClientIf, found := s.Trackers.Load(sourceId)
 
-	if !found {
-		log.Printf("Added new client, starting new boxes [%s]\n", sourceId)
-		trackerInstances := make([]*TrackerInstance, 0)
-		for _, bb := range detections {
-			trackerInstance := NewTrackerInstance(bb)
-			trackerInstance.InitTracker(imgMat)
-			trackerInstances = append(trackerInstances, trackerInstance)
-		}
-		trClient := &TrackerClient{
-			sourceId:        sourceId,
-			trackerInstance: trackerInstances,
-		}
-		s.Trackers.Store(sourceId, trClient)
-		log.Printf("Tracker added with %d boxes: [%s]\n", len(trClient.trackerInstance), sourceId)
+	// // The maximum number of detections to track: 200
+	// matches := make(map[int]int, 200)
+	// notMatched := []int{}
 
-	} else {
-		log.Printf("[%s] Tracker already exists, updating boxes...\n", sourceId)
-		trackerClient, ok := trClientIf.(*TrackerClient)
-		if !ok {
-			log.Printf("Error: unable to cast tracker to expected type\n")
-			return
-		}
+	// if !found {
+	// 	log.Printf("Added new client, starting new boxes [%s]\n", sourceId)
+	// 	trackerInstances := make([]*TrackerInstance, 0)
+	// 	for _, bb := range detections {
+	// 		trackerInstance := NewTrackerInstance(bb)
+	// 		trackerInstance.InitTracker(imgMat)
+	// 		trackerInstances = append(trackerInstances, trackerInstance)
+	// 	}
+	// 	trClient := &TrackerClient{
+	// 		sourceId:        sourceId,
+	// 		trackerInstance: trackerInstances,
+	// 	}
+	// 	s.Trackers.Store(sourceId, trClient)
+	// 	log.Printf("Tracker added with %d boxes: [%s]\n", len(trClient.trackerInstance), sourceId)
 
-		// Iterate over each detection
-		for i, bb := range detections {
-			iou := 0.0
-			for i2, bb2 := range trackerClient.trackerInstance {
-				iou2 := getIoU(bb, bb2.store)
-				// If IoU exceeds threshold and is the highest so far, register match
-				if iou2 > 0.5 && iou < iou2 {
-					iou = iou2
-					matches[i2] = i
-				}
-			}
-			// If detection didn't match with any object, add index to unmatched list
-			if iou == 0.0 {
-				notMatched = append(notMatched, i)
-			}
-		}
+	// } else {
+	// 	log.Printf("[%s] Tracker already exists, updating boxes...\n", sourceId)
+	// 	trackerClient, ok := trClientIf.(*TrackerClient)
+	// 	if !ok {
+	// 		log.Printf("Error: unable to cast tracker to expected type\n")
+	// 		return
+	// 	}
 
-		// If the object is already being tracked, update its position
-		for i2, i := range matches {
-			trackerClient.DeleteInstanceAt(i2)
+	// 	// Iterate over each detection
+	// 	for i, bb := range detections {
+	// 		iou := 0.0
+	// 		for i2, bb2 := range trackerClient.trackerInstance {
+	// 			iou2 := getIoU(bb, bb2.store)
+	// 			// If IoU exceeds threshold and is the highest so far, register match
+	// 			if iou2 > 0.5 && iou < iou2 {
+	// 				iou = iou2
+	// 				matches[i2] = i
+	// 			}
+	// 		}
+	// 		// If detection didn't match with any object, add index to unmatched list
+	// 		if iou == 0.0 {
+	// 			notMatched = append(notMatched, i)
+	// 		}
+	// 	}
 
-			newTrackerInstance := NewTrackerInstance(detections[i])
-			newTrackerInstance.InitTracker(imgMat)
+	// 	// If the object is already being tracked, update its position
+	// 	for i2, i := range matches {
+	// 		trackerClient.DeleteInstanceAt(i2)
 
-			trackerClient.AddInstance(newTrackerInstance)
-		}
+	// 		newTrackerInstance := NewTrackerInstance(detections[i])
+	// 		newTrackerInstance.InitTracker(imgMat)
 
-		// If the object is not being tracked, add a new tracker instance
-		for _, i := range notMatched {
-			newTrackerInstance := NewTrackerInstance(detections[i])
-			newTrackerInstance.InitTracker(imgMat)
+	// 		trackerClient.AddInstance(newTrackerInstance)
+	// 	}
 
-			trackerClient.AddInstance(newTrackerInstance)
-		}
-	}
+	// 	// If the object is not being tracked, add a new tracker instance
+	// 	for _, i := range notMatched {
+	// 		newTrackerInstance := NewTrackerInstance(detections[i])
+	// 		newTrackerInstance.InitTracker(imgMat)
+
+	// 		trackerClient.AddInstance(newTrackerInstance)
+	// 	}
+	// }
 
 }
 
@@ -132,47 +134,47 @@ func (s *Server) TrackObjects(frame []byte, metadata *api.FrameMetadata) {
 
 	imgMat, err := gocv.IMDecode(frame, gocv.IMReadColor)
 	if err != nil {
-		log.Printf("[%d] Error decoding image: %v\n", metadata.FrameId, err)
+		log.Printf("[%d] Error decoding image: %v", metadata.FrameId, err)
 		return
 	}
 	defer imgMat.Close()
 
 	log.Printf("Tracking objects, image [%d] decoded, len: [%d] bytes...\n", metadata.FrameId, len(frame))
 
-	trClientIf, found := s.Trackers.Load(metadata.SourceId)
-	if !found {
-		log.Printf("Tracking for [%d] client [%s] not found.\n", metadata.FrameId, metadata.SourceId)
-		return
-	}
-	trackerClient, ok := trClientIf.(*TrackerClient)
-	if !ok {
-		log.Printf("Error: unable to cast tracker to expected type\n")
-		return
-	}
-	log.Printf("Updating tracker for [%d] client [%s]...\n", metadata.FrameId, metadata.SourceId)
-	// Iterate over each detection
-	for _, trInstance := range trackerClient.trackerInstance {
-		ok, err := trInstance.UpdateTracker(imgMat)
-		if err != nil {
-			log.Printf("Error updating tracker [%d]: %v", metadata.FrameId, err)
-			continue
-		}
-		if !ok {
-			log.Printf("Tracker update [%d] failed (disappeared?), deleting instance...\n", metadata.FrameId)
-			trInstance.DeleteInstance()
-			continue
-		} else {
-			log.Printf("Tracker updated [%d] successfully.\n", metadata.FrameId)
-		}
-		if s.DtConfig.SaveImage && metadata.FrameId%int64(s.DtConfig.SaveImageFrequency) == 0 {
-			timestamp := time.Now().UnixNano()
-			filename := fmt.Sprintf("%s/%d_track.jpg", s.DtConfig.SaveImagePath, timestamp)
-			gocv.Rectangle(&imgMat, trInstance.store, color.RGBA{0, 255, 0, 0}, 2)
-			if ok := gocv.IMWrite(filename, imgMat); !ok {
-				log.Printf("Failed to write frame to file")
-			}
-		}
-	}
+	// trClientIf, found := s.Trackers.Load(metadata.SourceId)
+	// if !found {
+	// 	log.Printf("Tracking for [%d] client [%s] not found.\n", metadata.FrameId, metadata.SourceId)
+	// 	return
+	// }
+	// trackerClient, ok := trClientIf.(*TrackerClient)
+	// if !ok {
+	// 	log.Printf("Error: unable to cast tracker to expected type\n")
+	// 	return
+	// }
+	// log.Printf("Updating tracker for [%d] client [%s]...\n", metadata.FrameId, metadata.SourceId)
+	// // Iterate over each detection
+	// for _, trInstance := range trackerClient.trackerInstance {
+	// 	ok, err := trInstance.UpdateTracker(imgMat)
+	// 	if err != nil {
+	// 		log.Printf("Error updating tracker [%d]: %v", metadata.FrameId, err)
+	// 		continue
+	// 	}
+	// 	if !ok {
+	// 		log.Printf("Tracker update [%d] failed (disappeared?), deleting instance...\n", metadata.FrameId)
+	// 		trInstance.DeleteInstance()
+	// 		continue
+	// 	} else {
+	// 		log.Printf("Tracker updated [%d] successfully.\n", metadata.FrameId)
+	// 	}
+	// 	if s.DtConfig.SaveImage && metadata.FrameId%int64(s.DtConfig.SaveImageFrequency) == 0 {
+	// 		timestamp := time.Now().UnixNano()
+	// 		filename := fmt.Sprintf("%s/%d_track.jpg", s.DtConfig.SaveImagePath, timestamp)
+	// 		gocv.Rectangle(&imgMat, trInstance.store, color.RGBA{0, 255, 0, 0}, 2)
+	// 		if ok := gocv.IMWrite(filename, imgMat); !ok {
+	// 			log.Printf("Failed to write frame to file")
+	// 		}
+	// 	}
+	// }
 
 }
 

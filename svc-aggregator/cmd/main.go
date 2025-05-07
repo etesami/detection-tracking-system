@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"syscall"
 
 	api "github.com/etesami/detection-tracking-system/api"
@@ -66,8 +65,8 @@ func main() {
 	s := &internal.Server{
 		Clients:      sync.Map{},
 		RegisterCh:   make(chan *api.Service, 100),
-		DtClient:     atomic.Value{},
-		TrClient:     atomic.Value{},
+		DtClient:     utils.GrpcClient{},
+		TrClient:     utils.GrpcClient{},
 		GlovalConfig: conf,
 	}
 	grpcServer := grpc.NewServer()
@@ -92,7 +91,7 @@ func main() {
 		Address: REMOTE_DETECTOR_HOST,
 		Port:    REMOTE_DETECTOR_PORT,
 	}
-	go utils.MonitorConnection(tarDtSvc, &s.DtClient)
+	go utils.MonitorConnection1(tarDtSvc, &s.DtClient)
 
 	REMOTE_TRACKER_HOST := os.Getenv("REMOTE_TRACKER_HOST")
 	REMOTE_TRACKER_PORT := os.Getenv("REMOTE_TRACKER_PORT")
@@ -103,7 +102,7 @@ func main() {
 		Address: REMOTE_TRACKER_HOST,
 		Port:    REMOTE_TRACKER_PORT,
 	}
-	go utils.MonitorConnection(targetTrackingSvc, &s.TrClient)
+	go utils.MonitorConnection1(targetTrackingSvc, &s.TrClient)
 
 	metricAddr := os.Getenv("METRIC_ADDR")
 	metricPort := os.Getenv("METRIC_PORT")

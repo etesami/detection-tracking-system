@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"image"
 	"log"
-	"sync/atomic"
 	"time"
 
 	api "github.com/etesami/detection-tracking-system/api"
@@ -15,7 +14,7 @@ import (
 
 type Server struct {
 	pb.UnimplementedDetectionTrackingPipelineServer
-	TrackerClientRef atomic.Value
+	TrackerClientRef utils.GrpcClient
 	DtConfig         *DtConfig
 }
 
@@ -61,7 +60,7 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 		selectedBoxes = append(selectedBoxes, iboxes[indicies[i]])
 	}
 
-	go func(iboxes []image.Rectangle) {
+	go func(iboxes []image.Rectangle, metadata api.FrameMetadata) {
 		// construct the message for tracker service
 		m := detectionData{
 			SourceId:  metadata.SourceId,
@@ -75,13 +74,12 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 			return
 		}
 
-		clientIface := s.TrackerClientRef.Load()
-		if clientIface == nil {
+		c := s.TrackerClientRef.Load()
+		if c == nil {
 			log.Println("Tracker client is not initialized")
 			return
 		}
 
-		c := clientIface.(pb.DetectionTrackingPipelineClient)
 		d := pb.FrameData{
 			Metadata:      string(mByte),
 			FrameData:     recData.FrameData,
@@ -98,7 +96,7 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 		}
 		log.Printf("Sent frame [%d], response: [%s], RTT [%.2f] ms\n", int(metadata.FrameId), pong.Status, float64(rtt)/1000.0)
 
-	}(selectedBoxes)
+	}(selectedBoxes, metadata)
 
 	ack := &pb.Ack{
 		Status:                "ok",

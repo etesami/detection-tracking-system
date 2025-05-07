@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sync/atomic"
 	"time"
 
 	metric "github.com/etesami/detection-tracking-system/pkg/metric"
@@ -19,13 +18,12 @@ type Server struct {
 }
 
 // processTicker processes the ticker event
-func ProcessTicker(clientRef *atomic.Value, serverName string, metricList *metric.Metric, rtspPort string) error {
+func ProcessTicker(clientRef *utils.GrpcClient, serverName string, metricList *metric.Metric, rtspPort string) error {
 
-	clientIface := clientRef.Load()
-	if clientIface == nil {
+	client := clientRef.Load()
+	if client == nil {
 		return nil
 	}
-	client := clientIface.(pb.DetectionTrackingPipelineClient)
 
 	ip, err := utils.GetOutboundIP()
 	if err != nil {

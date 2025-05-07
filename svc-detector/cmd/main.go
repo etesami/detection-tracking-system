@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"sync/atomic"
 	"syscall"
 
 	api "github.com/etesami/detection-tracking-system/api"
@@ -54,7 +53,7 @@ func main() {
 	saveImageFrq, _ := strconv.Atoi(os.Getenv("SAVE_IMAGE_FREQUENCY"))
 
 	s := &internal.Server{
-		TrackerClientRef: atomic.Value{},
+		TrackerClientRef: utils.GrpcClient{},
 		DtConfig: &internal.DtConfig{
 			Model:              os.Getenv("YOLO_MODEL"),
 			ImageWidth:         width,
@@ -86,7 +85,7 @@ func main() {
 		Port:    REMOTE_TRACKER_PORT,
 	}
 
-	go utils.MonitorConnection(targetSvc, &s.TrackerClientRef)
+	go utils.MonitorConnection1(targetSvc, &s.TrackerClientRef)
 
 	metricAddr := os.Getenv("METRIC_ADDR")
 	metricPort := os.Getenv("METRIC_PORT")

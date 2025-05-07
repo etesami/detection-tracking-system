@@ -25,6 +25,8 @@ github.com/etesami/detection-tracking-system v0.0.0-20250506213753-1479f82dcbec 
 github.com/etesami/detection-tracking-system v0.0.0-20250506213753-1479f82dcbec/go.mod h1:orkRnfot1e8faeElZ3bo76DAgekwcjGqeMo4NgfAjEA=
 github.com/etesami/detection-tracking-system v0.0.0-20250506232559-346f32fd1e1a h1:dUXg2I4/MISEup6aRamvZpAIKXMHMj8MZzrTQI5jrwQ=
 github.com/etesami/detection-tracking-system v0.0.0-20250506232559-346f32fd1e1a/go.mod h1:orkRnfot1e8faeElZ3bo76DAgekwcjGqeMo4NgfAjEA=
+github.com/etesami/detection-tracking-system v0.0.0-20250507070356-2506d859a077 h1:f6NqDtHeSriRrPzPGXDb6NJNduJX5QPDHuFz23njsLA=
+github.com/etesami/detection-tracking-system v0.0.0-20250507070356-2506d859a077/go.mod h1:orkRnfot1e8faeElZ3bo76DAgekwcjGqeMo4NgfAjEA=
 github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
 github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=

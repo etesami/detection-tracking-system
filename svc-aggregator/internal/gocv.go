@@ -5,10 +5,10 @@ import (
 	"image"
 	"log"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	api "github.com/etesami/detection-tracking-system/api"
+	"github.com/etesami/detection-tracking-system/pkg/utils"
 
 	"gocv.io/x/gocv"
 )
@@ -43,8 +43,8 @@ type Config struct {
 // VideoInput manages video ingestion and processing
 type VideoInput struct {
 	config          *Config
-	grpcDtClientRef *atomic.Value
-	grpcTrClientRef *atomic.Value
+	grpcDtClientRef *utils.GrpcClient
+	grpcTrClientRef *utils.GrpcClient
 	queue           chan frameData // Channel for frames
 	Signal          signal
 	frameCount      int
@@ -55,7 +55,7 @@ type VideoInput struct {
 }
 
 // NewVideoInput creates and initializes a new VideoInput instance
-func NewVideoInput(config *Config, dtClient, trClient *atomic.Value) (*VideoInput, error) {
+func NewVideoInput(config *Config, dtClient, trClient *utils.GrpcClient) (*VideoInput, error) {
 
 	log.Printf("Initializing video input with source: %s\n", config.VideoSource)
 	capture, err := gocv.OpenVideoCapture(config.VideoSource)
@@ -156,7 +156,7 @@ func (vi *VideoInput) readFrames() {
 			}
 
 			if vi.config.MaxTotalFrames > 0 && vi.frameCount >= vi.config.MaxTotalFrames {
-				log.Printf("Stopping video input processing after [%d] frames\n", vi.frameCount)
+				log.Printf("Stopping frame reading after [%d] frames. Processing continues.", vi.frameCount)
 				// We should only stop the reading of frames, not the processing
 				// vi.Signal.Close()
 				return
@@ -177,15 +177,6 @@ func (vi *VideoInput) processFrames() {
 				return
 			}
 
-			// if vi.frameProcessed%200 == 0 {
-			// timestamp := time.Now().UnixNano()
-			// filename := fmt.Sprintf("/tmp/imgs/output_%d.jpg", timestamp)
-			// if ok := gocv.IMWrite(filename, frame); !ok {
-			// 	log.Printf("Failed to write frame to file")
-			// }
-			// log.Printf("Frame [%d] proccessed.\n", vi.frameProcessed+1)
-			// }
-
 			buf, err := gocv.IMEncode(gocv.PNGFileExt, f.frame)
 			if err != nil {
 				log.Printf("Failed to encode frame: %v", err)
@@ -200,7 +191,6 @@ func (vi *VideoInput) processFrames() {
 			)
 
 			// Alternate between sending to the tracker and detector
-			// TODO: This should not use the gloval frameout.
 			if int(f.metadata.FrameId)%vi.config.DetectionFrequency == 0 {
 				client = vi.grpcDtClientRef
 				service = "detector"

@@ -7,7 +7,6 @@ import (
 	"log"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	api "github.com/etesami/detection-tracking-system/api"
@@ -20,8 +19,8 @@ type Server struct {
 
 	Clients     sync.Map // map[string]*Service
 	VideoInputs []*VideoInput
-	DtClient    atomic.Value
-	TrClient    atomic.Value
+	DtClient    utils.GrpcClient
+	TrClient    utils.GrpcClient
 
 	// Channel for a new client
 	RegisterCh   chan *api.Service
@@ -96,12 +95,11 @@ func (s *Server) SendDataToServer(ctx context.Context, recData *pb.Data) (*pb.Ac
 }
 
 // SendFrame sends a frame to the detector/tracker service
-func SendFrame(f api.FrameMetadata, frameByte []byte, clientRef *atomic.Value, dstSvcName string) error {
-	clientIface := clientRef.Load()
-	if clientIface == nil {
+func SendFrame(f api.FrameMetadata, frameByte []byte, clientRef *utils.GrpcClient, dstSvcName string) error {
+	client := clientRef.Load()
+	if client == nil {
 		return fmt.Errorf("client is not initialized")
 	}
-	client := clientIface.(pb.DetectionTrackingPipelineClient)
 
 	metaByte, err := json.Marshal(f)
 	if err != nil {

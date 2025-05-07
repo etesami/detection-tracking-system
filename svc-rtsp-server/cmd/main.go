@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	api "github.com/etesami/detection-tracking-system/api"
@@ -65,8 +64,8 @@ func main() {
 		Address: REMOTE_SVC_HOST,
 		Port:    REMOTE_SVC_PORT,
 	}
-	var client atomic.Value
-	go utils.MonitorConnection(targetSvc, &client)
+	var client utils.GrpcClient
+	go utils.MonitorConnection1(targetSvc, &client)
 
 	// First call to processTicker
 	time.Sleep(2 * time.Second) // Wait a few seconds before the first call to let connection be established
@@ -79,7 +78,7 @@ func main() {
 	defer ticker.Stop()
 
 	log.Printf("Update frequency: %d seconds\n", updateFrequency)
-	go func(m *metric.Metric, c *atomic.Value) {
+	go func(m *metric.Metric, c *utils.GrpcClient) {
 		for range ticker.C {
 			if err := internal.ProcessTicker(c, "aggregator", m, RTSP_SERVER_PORT); err != nil {
 				log.Printf("Error during processing: %v", err)
