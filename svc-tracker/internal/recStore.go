@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"image"
 	"sync"
 
@@ -16,22 +15,19 @@ type TrackerClient struct {
 }
 
 type TrackerInstance struct {
-	mu      sync.Mutex
+	// mu      sync.Mutex
 	tracker *gocv.Tracker
 	store   image.Rectangle
 }
 
 func (tc *TrackerClient) DeleteInstanceAt(index int) {
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
-
 	if index < 0 || index >= len(tc.trackerInstance) {
 		return // out of bounds, ignore or handle error
 	}
 
 	instance := tc.trackerInstance[index]
 	if instance != nil {
-		instance.DeleteInstance()
+		instance.deleteInstance()
 	}
 
 	tc.trackerInstance = append(tc.trackerInstance[:index], tc.trackerInstance[index+1:]...)
@@ -41,8 +37,6 @@ func (tc *TrackerClient) AddInstance(instance *TrackerInstance) {
 	if instance == nil {
 		return
 	}
-	tc.mu.Lock()
-	defer tc.mu.Unlock()
 	tc.trackerInstance = append(tc.trackerInstance, instance)
 }
 
@@ -55,31 +49,24 @@ func NewTrackerInstance(rec image.Rectangle) *TrackerInstance {
 }
 
 func (ti *TrackerInstance) InitTracker(frame gocv.Mat) {
-	ti.mu.Lock()
-	defer ti.mu.Unlock()
 	if ti.tracker != nil {
 		(*ti.tracker).Init(frame, ti.store)
 	}
 }
 
-func (ti *TrackerInstance) UpdateTracker(frame gocv.Mat) (bool, error) {
-	ti.mu.Lock()
-	defer ti.mu.Unlock()
+func (ti *TrackerInstance) UpdateTracker(frame gocv.Mat) bool {
 	if ti.tracker != nil {
 		rec, ok := (*ti.tracker).Update(frame)
 		if ok {
 			ti.store = rec
-			return true, nil
+			return true
 		}
-		return false, fmt.Errorf("tracker update failed")
+		return false
 	}
-	return false, fmt.Errorf("tracker is nil")
+	return false
 }
 
-func (ti *TrackerInstance) DeleteInstance() {
-	ti.mu.Lock()
-	defer ti.mu.Unlock()
-
+func (ti *TrackerInstance) deleteInstance() {
 	if ti.tracker != nil {
 		(*ti.tracker).Close() // release native resources
 		ti.tracker = nil      // clear the pointer

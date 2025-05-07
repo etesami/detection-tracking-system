@@ -46,11 +46,11 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 		return nil, err
 	}
 
-	log.Printf("Received frame ID [%d]: [%d] Bytes\n", metadata.FrameId, len(recData.FrameData))
+	log.Printf("Frame [%d]: Received: [%d] Bytes\n", metadata.FrameId, len(recData.FrameData))
 
 	// process the frame data
 	iboxes, indicies := s.DtConfig.ProcessFrame(recData.FrameData, int(metadata.FrameId))
-	selectedBoxes := make([]image.Rectangle, len(indicies))
+	selectedBoxes := make([]image.Rectangle, 0, len(indicies))
 	// select only boxes with indicies
 	for i := range indicies {
 		if indicies[i] < 0 || indicies[i] >= len(iboxes) {
@@ -60,13 +60,13 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 		selectedBoxes = append(selectedBoxes, iboxes[indicies[i]])
 	}
 
-	go func(iboxes []image.Rectangle, metadata api.FrameMetadata) {
+	go func(sBoxes []image.Rectangle, metadata api.FrameMetadata) {
 		// construct the message for tracker service
 		m := detectionData{
 			SourceId:  metadata.SourceId,
 			Timestamp: metadata.Timestamp,
 			FrameId:   metadata.FrameId,
-			Boxes:     iboxes,
+			Boxes:     sBoxes,
 		}
 		mByte, err := json.Marshal(m)
 		if err != nil {
@@ -94,7 +94,8 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 		if err != nil {
 			log.Printf("error calculating RTT: %v", err)
 		}
-		log.Printf("Sent frame [%d], response: [%s], RTT [%.2f] ms\n", int(metadata.FrameId), pong.Status, float64(rtt)/1000.0)
+		log.Printf("Sent frame [%d] with [%d] detections, response: [%s], RTT [%.2f] ms\n",
+			int(metadata.FrameId), len(sBoxes), pong.Status, float64(rtt)/1000.0)
 
 	}(selectedBoxes, metadata)
 

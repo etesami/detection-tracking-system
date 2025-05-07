@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"sync"
 	"syscall"
 
 	api "github.com/etesami/detection-tracking-system/api"
@@ -51,18 +50,20 @@ func main() {
 
 	width, _ := strconv.Atoi(os.Getenv("IMAGE_WIDTH"))
 	height, _ := strconv.Atoi(os.Getenv("IMAGE_HEIGHT"))
-	saveImageFrq, _ := strconv.Atoi(os.Getenv("SAVE_IMAGE_FREQUENCY"))
+	saveImageFrqTr, _ := strconv.Atoi(os.Getenv("SAVE_IMAGE_FREQUENCY_TRACKING"))
+	saveImageFrqDt, _ := strconv.Atoi(os.Getenv("SAVE_IMAGE_FREQUENCY_DETECTION"))
 
 	s := &internal.Server{
 		DtConfig: &internal.DtConfig{
-			Model:              os.Getenv("YOLO_MODEL"),
-			ImageWidth:         width,
-			ImageHeight:        height,
-			SaveImage:          os.Getenv("SAVE_IMAGE") == "true",
-			SaveImagePath:      os.Getenv("SAVE_IMAGE_PATH"),
-			SaveImageFrequency: saveImageFrq,
+			Model:                os.Getenv("YOLO_MODEL"),
+			ImageWidth:           width,
+			ImageHeight:          height,
+			SaveImage:            os.Getenv("SAVE_IMAGE") == "true",
+			SaveImagePath:        os.Getenv("SAVE_IMAGE_PATH"),
+			SaveImageFrequencyTr: saveImageFrqTr,
+			SaveImageFrequencyDt: saveImageFrqDt,
 		},
-		Trackers: sync.Map{},
+		Trackers: make(map[string]*internal.TrackerClient),
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterDetectionTrackingPipelineServer(grpcServer, s)
