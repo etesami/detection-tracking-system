@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"sync"
 	"time"
 
 	api "github.com/etesami/detection-tracking-system/api"
@@ -54,53 +55,54 @@ func (s *Server) AddDetections(sourceId string, frameId int64, frame []byte, det
 	trClient, found := s.Trackers[sourceId]
 
 	// The maximum number of detections to track: 200
-	matches := make(map[int]int, 200)
+	matches := make(map[uint64]int, 200)
 	notMatched := []int{}
 
 	if !found {
-		trackerInstances := make([]*TrackerInstance, 0)
+		// trackerInstances := make([]*TrackerInstance, 0)
+		trClient = &TrackerClient{
+			sourceId:        sourceId,
+			trackerInstance: sync.Map{},
+		}
 		for _, bb := range detections {
 			trackerInstance := NewTrackerInstance(bb)
 			trackerInstance.InitTracker(imgMat)
-			trackerInstances = append(trackerInstances, trackerInstance)
-		}
-		trClient = &TrackerClient{
-			sourceId:        sourceId,
-			trackerInstance: trackerInstances,
+			trClient.AddInstance(trackerInstance)
 		}
 		s.Trackers[sourceId] = trClient
-		log.Printf("Frame [%d], [%s]: Tracker added with (%d) boxes: [%s]", frameId, sourceName, len(trClient.trackerInstance), sourceId)
+		log.Printf("Frame [%d], [%s]: Tracker added with (%d) boxes: [%s]",
+			frameId, sourceName, len(detections), sourceId)
 
 	} else {
 		log.Printf("Frame [%d], [%s]: Tracker already exists, updating boxes [%s]", frameId, sourceName, sourceId)
-		// trClient, ok := trClientIf.(*TrackerClient)
-		// if !ok {
-		// 	log.Printf("Frame [%d], [%s]:Error: unable to cast tracker to expected type", frameId, sourceName)
-		// 	return
-		// }
-
-		trClient.mu.Lock()
-		defer trClient.mu.Unlock()
 
 		// Iterate over each detection
 		for i, bb := range detections {
 			iou := 0.0
-			for i2, bb2 := range trClient.trackerInstance {
-				iou2 := getIoU(bb, bb2.store)
-				// If IoU exceeds threshold and is the highest so far, register match
-				if iou2 > 0.5 && iou < iou2 {
-					iou = iou2
-					matches[i2] = i
+			trClient.trackerInstance.Range(func(key, value interface{}) bool {
+				if i2, ok := key.(uint64); ok {
+					if trInstance, ok := value.(*TrackerInstance); ok {
+						// Calculate IoU between detection and tracker instance
+						iou2 := getIoU(bb, trInstance.store)
+						// If IoU exceeds threshold and is the highest so far, register match
+						if iou2 > 0.5 && iou < iou2 {
+							iou = iou2
+							matches[i2] = i
+						}
+					}
 				}
-			}
+				return true
+			})
 			// If detection didn't match with any object, add index to unmatched list
 			if iou == 0.0 {
 				notMatched = append(notMatched, i)
 			}
-			log.Printf("Frame [%d], [%s]: Detection [%d] IoU: %f", frameId, sourceName, i, iou)
+			// log.Printf("Frame [%d], [%s]: Detection [%d] IoU: %f", frameId, sourceName, i, iou)
 		}
 
-		log.Printf("Frame [%d], [%s]: Mathces: [%d], Unmatched: [%d]", frameId, sourceName, len(matches), len(notMatched))
+		log.Printf("Frame [%d], [%s]: Mathces: [%d], Unmatched: [%d]",
+			frameId, sourceName, len(matches), len(notMatched))
+
 		// If the object is already being tracked, update its position
 		for i2, i := range matches {
 			trClient.DeleteInstanceAt(i2)
@@ -122,17 +124,24 @@ func (s *Server) AddDetections(sourceId string, frameId int64, frame []byte, det
 
 	if s.DtConfig.SaveImage && frameId%int64(s.DtConfig.SaveImageFrequencyDt) == 0 {
 		timestamp := time.Now().UnixNano()
-		filename := fmt.Sprintf("%s/%d_detect.jpg", s.DtConfig.SaveImagePath, timestamp)
-		log.Printf("Frame [%d], [%s]: Saving image with [%d] detections as %d_detect.jpg",
-			frameId, sourceName, len(trClient.trackerInstance), timestamp)
-		for _, trInstance := range trClient.trackerInstance {
-			gocv.Rectangle(&imgMat, trInstance.store, color.RGBA{0, 255, 0, 0}, 2)
+		filename := fmt.Sprintf("%s/%d_f%d_detect.jpg", s.DtConfig.SaveImagePath, timestamp, frameId)
+		recs := make([]image.Rectangle, 0)
+		trClient.trackerInstance.Range(func(key, value interface{}) bool {
+			if _, ok := key.(uint64); ok {
+				if trInstance, ok := value.(*TrackerInstance); ok {
+					recs = append(recs, trInstance.store)
+				}
+			}
+			return true
+		})
+		log.Printf("Frame [%d], [%s]: Saving image as %d_f%d_detect.jpg", frameId, sourceName, timestamp, frameId)
+		for _, rc := range recs {
+			gocv.Rectangle(&imgMat, rc, color.RGBA{0, 255, 0, 0}, 2)
 		}
 		if ok := gocv.IMWrite(filename, imgMat); !ok {
 			log.Printf("Frame [%d], [%s]: Failed to write frame to file", frameId, sourceName)
 		}
 	}
-
 }
 
 func (s *Server) TrackObjects(frame []byte, metadata *api.FrameMetadata) {
@@ -145,43 +154,54 @@ func (s *Server) TrackObjects(frame []byte, metadata *api.FrameMetadata) {
 	}
 	defer imgMat.Close()
 
-	// trClientIf, found := s.Trackers.Load(metadata.SourceId)
 	trClient, found := s.Trackers[metadata.SourceId]
 	if !found {
 		log.Printf("Frame [%d], [%s]: Tracking not found.", metadata.FrameId, sourceName)
 		return
 	}
-	// trackerClient, ok := trClientIf.(*TrackerClient)
-	// if !ok {
-	// 	log.Printf("Error: unable to cast tracker to expected type\n")
-	// 	return
-	// }
-	// log.Printf("Updating tracker for [%d] client [%s]...\n", metadata.FrameId, metadata.SourceId)
-	// Iterate over each detection
 
-	trClient.mu.Lock()
-	defer trClient.mu.Unlock()
-
-	lostInstances := make([]int, 0)
-	for i, trInstance := range trClient.trackerInstance {
-		if ok := trInstance.UpdateTracker(imgMat); !ok {
-			lostInstances = append(lostInstances, i)
-			continue
+	lostInstances := make([]uint64, 0)
+	totalDetections := 0
+	trClient.trackerInstance.Range(func(key, value interface{}) bool {
+		if i, ok := key.(uint64); ok {
+			if trInstance, ok := value.(*TrackerInstance); ok {
+				if ok := trInstance.UpdateTracker(imgMat); !ok {
+					lostInstances = append(lostInstances, i)
+				}
+				totalDetections++
+			}
 		}
-	}
-	log.Printf("Frame [%d], [%s]: Lost trackings: [%d/%d]", metadata.FrameId, sourceName, len(lostInstances), len(trClient.trackerInstance))
+		return true // continue iteration
+	})
+
+	log.Printf("Frame [%d], [%s]: Lost trackings: [%d]/ [%d]",
+		metadata.FrameId, sourceName, len(lostInstances), totalDetections)
 
 	// Delete lost instances
+	deleted := 0
 	for _, i := range lostInstances {
 		trClient.DeleteInstanceAt(i)
+		deleted++
 	}
+	log.Printf("Frame [%d], [%s]: Deleted [%d] lost trackings.", metadata.FrameId, sourceName, deleted)
 
 	if s.DtConfig.SaveImage && metadata.FrameId%int64(s.DtConfig.SaveImageFrequencyTr) == 0 {
 		timestamp := time.Now().UnixNano()
-		filename := fmt.Sprintf("%s/%d_track.jpg", s.DtConfig.SaveImagePath, timestamp)
-		log.Printf("Frame [%d], [%s]: Saving image as %d_track.jpg", metadata.FrameId, sourceName, timestamp)
-		for _, trInstance := range trClient.trackerInstance {
-			gocv.Rectangle(&imgMat, trInstance.store, color.RGBA{0, 255, 0, 0}, 2)
+		filename := fmt.Sprintf("%s/%d_f%d_track.jpg", s.DtConfig.SaveImagePath, timestamp, metadata.FrameId)
+		// since drawing takes time, we first get all instances and then use them to draw
+		recs := make([]image.Rectangle, 0)
+		trClient.trackerInstance.Range(func(key, value interface{}) bool {
+			if _, ok := key.(uint64); ok {
+				if trInstance, ok := value.(*TrackerInstance); ok {
+					recs = append(recs, trInstance.store)
+				}
+			}
+			return true
+		})
+		log.Printf("Frame [%d], [%s]: Saving image as %d_f%d_track.jpg", metadata.FrameId, sourceName, timestamp, metadata.FrameId)
+		for _, rc := range recs {
+			// Draw the bounding box
+			gocv.Rectangle(&imgMat, rc, color.RGBA{0, 255, 0, 0}, 2)
 		}
 		if ok := gocv.IMWrite(filename, imgMat); !ok {
 			log.Printf("Frame [%d], [%s]: Failed to write frame to file", metadata.FrameId, sourceName)
@@ -201,9 +221,9 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 		return nil, err
 	}
 
-	log.Printf("Frame [%d], [%s]: Received: [%d] Bytes\n", metadata.FrameId, "Track", len(recData.FrameData))
+	// log.Printf("Frame [%d], [%s]: Received: [%d] Bytes\n", metadata.FrameId, "Track", len(recData.FrameData))
 
-	go s.TrackObjects(recData.FrameData, &metadata)
+	s.TrackObjects(recData.FrameData, &metadata)
 
 	ack := &pb.Ack{
 		Status:                "ok",
@@ -226,11 +246,11 @@ func (s *Server) SendDetectedFrameToServer(ctx context.Context, recData *pb.Fram
 		return nil, err
 	}
 
-	log.Printf("Frame [%d], [%s]: Received: [%d] Bytes, Detections: [%d]", metadata.FrameId, "Detect", len(recData.FrameData), len(metadata.Boxes))
+	// log.Printf("Frame [%d], [%s]: Received: [%d] Bytes, Detections: [%d]", metadata.FrameId, "Detect", len(recData.FrameData), len(metadata.Boxes))
 
 	// Go routine for adding/updating the detection data and managing the
 	// tracker instances
-	go s.AddDetections(metadata.SourceId, metadata.FrameId, recData.FrameData, metadata.Boxes)
+	s.AddDetections(metadata.SourceId, metadata.FrameId, recData.FrameData, metadata.Boxes)
 
 	ack := &pb.Ack{
 		Status:                "ok",

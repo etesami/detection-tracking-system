@@ -139,7 +139,7 @@ func (vi *VideoInput) readFrames() {
 				resized.Close()
 				return
 			default:
-				log.Println("Frame queue is full, dropping frame")
+				log.Printf("Frame [%d], queue is full, dropping frame", frameData.metadata.FrameId)
 				// If the queue is full, we can choose to drop the frame or wait
 				resized.Close()
 				vi.frameSkipped++
@@ -147,16 +147,17 @@ func (vi *VideoInput) readFrames() {
 
 			elapsed := float64(time.Since(startT).Milliseconds()) / 1000.0
 			sleepDuration := delay - elapsed
-			if vi.frameCount%100 == 0 {
-				log.Printf("[%d] frames processed. Time: %.2fs, Sleep: %.2fs, Skipped frames: [%d]\n", vi.frameCount, elapsed, sleepDuration, vi.frameSkipped)
+			if frameData.metadata.FrameId%100 == 0 {
+				log.Printf("[%d] frames processed. Time: %.2fs, Sleep: %.2fs, Skipped frames: [%d]\n",
+					frameData.metadata.FrameId, elapsed, sleepDuration, vi.frameSkipped)
 			}
 
 			if sleepDuration > 0 {
 				time.Sleep(time.Duration(sleepDuration) * time.Second)
 			}
 
-			if vi.config.MaxTotalFrames > 0 && vi.frameCount >= vi.config.MaxTotalFrames {
-				log.Printf("Stopping frame reading after [%d] frames. Processing continues.", vi.frameCount)
+			if vi.config.MaxTotalFrames > 0 && frameData.metadata.FrameId >= int64(vi.config.MaxTotalFrames) {
+				log.Printf("Stopping frame reading after [%d] frames. Processing continues.", frameData.metadata.FrameId)
 				// We should only stop the reading of frames, not the processing
 				// vi.Signal.Close()
 				return
@@ -191,18 +192,23 @@ func (vi *VideoInput) processFrames() {
 			)
 
 			// Alternate between sending to the tracker and detector
-			if int(f.metadata.FrameId)%vi.config.DetectionFrequency == 0 {
+			// The fist frame is always sent to the detector
+			if f.metadata.FrameId == 1 || int(f.metadata.FrameId)%vi.config.DetectionFrequency == 0 {
 				client = vi.grpcDtClientRef
 				service = "detector"
 			}
 
+			frameCopy := make([]byte, len(buf.GetBytes()))
+			copy(frameCopy, buf.GetBytes())
 			// Send the frame to the remote service using gRPC
-			if err := SendFrame(f.metadata, buf.GetBytes(), client, service); err != nil {
-				log.Printf("failed to send frame: %v", err)
-				vi.frameSkipped++
-			} else {
-				vi.frameProcessed++
-			}
+			go func(m api.FrameMetadata, frame []byte, c *utils.GrpcClient, s string) {
+				if err := SendFrame(f.metadata, frame, c, s); err != nil {
+					log.Printf("failed to send frame: %v", err)
+					vi.frameSkipped++
+				} else {
+					vi.frameProcessed++
+				}
+			}(f.metadata, frameCopy, client, service)
 
 			buf.Close()
 			f.frame.Close() // Close the frame after processing
