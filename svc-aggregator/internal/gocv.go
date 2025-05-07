@@ -24,6 +24,11 @@ func (s *signal) Close() {
 	})
 }
 
+type frameData struct {
+	metadata api.FrameMetadata
+	frame    gocv.Mat
+}
+
 // Config holds the configuration parameters
 type Config struct {
 	VideoSource        string
@@ -40,7 +45,7 @@ type VideoInput struct {
 	config          *Config
 	grpcDtClientRef *atomic.Value
 	grpcTrClientRef *atomic.Value
-	queue           chan api.FrameData // Channel for frames
+	queue           chan frameData // Channel for frames
 	Signal          signal
 	frameCount      int
 	frameProcessed  int
@@ -63,7 +68,7 @@ func NewVideoInput(config *Config, dtClient, trClient *atomic.Value) (*VideoInpu
 		config:          config,
 		grpcDtClientRef: dtClient,
 		grpcTrClientRef: trClient,
-		queue:           make(chan api.FrameData, config.QueueSize),
+		queue:           make(chan frameData, config.QueueSize),
 		Signal:          signal{Done: make(chan struct{})},
 		capture:         capture,
 		frameCount:      0,
@@ -115,11 +120,13 @@ func (vi *VideoInput) readFrames() {
 			resized := gocv.NewMat()
 			gocv.Resize(img, &resized, image.Pt(vi.config.ImageWidth, vi.config.ImageHeight), 0, 0, gocv.InterpolationDefault)
 
-			frameData := api.FrameData{
-				Timestamp: time.Now().Format(time.RFC3339Nano),
-				SourceId:  vi.config.VideoSource,
-				FrameId:   int64(vi.capture.Get(gocv.VideoCapturePosFrames)),
-				Frame:     resized,
+			frameData := frameData{
+				metadata: api.FrameMetadata{
+					Timestamp: time.Now().Format(time.RFC3339Nano),
+					SourceId:  vi.config.VideoSource,
+					FrameId:   int64(vi.capture.Get(gocv.VideoCapturePosFrames)),
+				},
+				frame: resized,
 			}
 
 			select {
@@ -141,7 +148,7 @@ func (vi *VideoInput) readFrames() {
 			elapsed := float64(time.Since(startT).Milliseconds()) / 1000.0
 			sleepDuration := delay - elapsed
 			if vi.frameCount%100 == 0 {
-				log.Printf("Frame [%d] processing time: %.2fs, sleep: %.2fs, skipped frames: [%d]\n", vi.frameCount, elapsed, sleepDuration, vi.frameSkipped)
+				log.Printf("[%d] frames processed. Time: %.2fs, Sleep: %.2fs, Skipped frames: [%d]\n", vi.frameCount, elapsed, sleepDuration, vi.frameSkipped)
 			}
 
 			if sleepDuration > 0 {
@@ -150,7 +157,8 @@ func (vi *VideoInput) readFrames() {
 
 			if vi.config.MaxTotalFrames > 0 && vi.frameCount >= vi.config.MaxTotalFrames {
 				log.Printf("Stopping video input processing after [%d] frames\n", vi.frameCount)
-				vi.Signal.Close()
+				// We should only stop the reading of frames, not the processing
+				// vi.Signal.Close()
 				return
 			}
 
@@ -178,11 +186,11 @@ func (vi *VideoInput) processFrames() {
 			// log.Printf("Frame [%d] proccessed.\n", vi.frameProcessed+1)
 			// }
 
-			buf, err := gocv.IMEncode(".jpg", f.Frame)
+			buf, err := gocv.IMEncode(gocv.PNGFileExt, f.frame)
 			if err != nil {
 				log.Printf("Failed to encode frame: %v", err)
 				vi.frameSkipped++
-				f.Frame.Close()
+				f.frame.Close()
 				continue
 			}
 
@@ -192,13 +200,14 @@ func (vi *VideoInput) processFrames() {
 			)
 
 			// Alternate between sending to the tracker and detector
-			if vi.frameCount%vi.config.DetectionFrequency == 0 {
+			// TODO: This should not use the gloval frameout.
+			if int(f.metadata.FrameId)%vi.config.DetectionFrequency == 0 {
 				client = vi.grpcDtClientRef
 				service = "detector"
 			}
 
 			// Send the frame to the remote service using gRPC
-			if err := SendFrame(f, buf.GetBytes(), client, service); err != nil {
+			if err := SendFrame(f.metadata, buf.GetBytes(), client, service); err != nil {
 				log.Printf("failed to send frame: %v", err)
 				vi.frameSkipped++
 			} else {
@@ -206,7 +215,7 @@ func (vi *VideoInput) processFrames() {
 			}
 
 			buf.Close()
-			f.Frame.Close() // Close the frame after processing
+			f.frame.Close() // Close the frame after processing
 
 		case <-vi.Signal.Done:
 			// Closding frame will be handled in the Close method
@@ -237,7 +246,7 @@ func (vi *VideoInput) Close() {
 	log.Printf("  Closing vi.queue channel...")
 	close(vi.queue) // close channel so there are no more frames will be added to the queue
 	for f := range vi.queue {
-		f.Frame.Close() // cleanup frames left in the queue
+		f.frame.Close() // cleanup frames left in the queue
 	}
 
 	log.Println("VideoInput closed.")

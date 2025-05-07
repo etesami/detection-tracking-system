@@ -19,13 +19,11 @@ type Server struct {
 	DtConfig         *DtConfig
 }
 
-type frameWithBoxes struct {
+type detectionData struct {
 	SourceId  string
 	Timestamp string
 	FrameId   int64
 	Boxes     []image.Rectangle
-	Indicies  []int
-	Frame     []byte
 }
 
 // YoloV8 detector model
@@ -41,26 +39,35 @@ type DtConfig struct {
 // SendFrameServer handles incoming data from ingestion/aggregation services
 func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (*pb.Ack, error) {
 	recTime := time.Now().Format(time.RFC3339Nano)
-	log.Printf("Received at [%s]: [%d]\n", recTime, len(recData.FrameData))
 
 	// unmarshal metadata into a struct
-	var metadata api.FrameData
+	var metadata api.FrameMetadata
 	if err := json.Unmarshal([]byte(recData.Metadata), &metadata); err != nil {
 		log.Printf("Error unmarshalling metadata: %v", err)
 		return nil, err
 	}
 
+	log.Printf("Received frame ID [%d]: [%d] Bytes\n", metadata.FrameId, len(recData.FrameData))
+
 	// process the frame data
 	iboxes, indicies := s.DtConfig.ProcessFrame(recData.FrameData, int(metadata.FrameId))
+	selectedBoxes := make([]image.Rectangle, len(indicies))
+	// select only boxes with indicies
+	for i := range indicies {
+		if indicies[i] < 0 || indicies[i] >= len(iboxes) {
+			log.Printf("[Warning] Invalid index %d for boxes", indicies[i])
+			continue
+		}
+		selectedBoxes = append(selectedBoxes, iboxes[indicies[i]])
+	}
 
-	go func() {
+	go func(iboxes []image.Rectangle) {
 		// construct the message for tracker service
-		m := frameWithBoxes{
+		m := detectionData{
 			SourceId:  metadata.SourceId,
 			Timestamp: metadata.Timestamp,
 			FrameId:   metadata.FrameId,
 			Boxes:     iboxes,
-			Indicies:  indicies,
 		}
 		mByte, err := json.Marshal(m)
 		if err != nil {
@@ -91,7 +98,7 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 		}
 		log.Printf("Sent frame [%d], response: [%s], RTT [%.2f] ms\n", int(metadata.FrameId), pong.Status, float64(rtt)/1000.0)
 
-	}()
+	}(selectedBoxes)
 
 	ack := &pb.Ack{
 		Status:                "ok",

@@ -51,7 +51,7 @@ func (c *DtConfig) ProcessFrame(frame []byte, frameId int) ([]image.Rectangle, [
 
 	if c.SaveImage && frameId%c.SaveImageFrequency == 0 {
 		timestamp := time.Now().UnixNano()
-		filename := fmt.Sprintf("%s/output_%d.jpg", c.SaveImagePath, timestamp)
+		filename := fmt.Sprintf("%s/%d_detect.jpg", c.SaveImagePath, timestamp)
 		if ok := gocv.IMWrite(filename, img); !ok {
 			log.Printf("Failed to write frame to file")
 		}

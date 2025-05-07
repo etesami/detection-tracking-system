@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -50,11 +51,24 @@ func main() {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
+	frameRate, _ := strconv.Atoi(os.Getenv("FRAME_RATE"))
+	queueSize, _ := strconv.Atoi(os.Getenv("QUEUE_SIZE"))
+	maxTotalFrames, _ := strconv.Atoi(os.Getenv("MAX_TOTAL_FRAMES"))
+	detectionFrequency, _ := strconv.Atoi(os.Getenv("DETECTION_FREQUENCY"))
+
+	conf := &internal.Config{
+		QueueSize:          queueSize,
+		FrameRate:          float64(frameRate),
+		MaxTotalFrames:     maxTotalFrames,
+		DetectionFrequency: detectionFrequency,
+	}
+
 	s := &internal.Server{
-		Clients:    sync.Map{},
-		RegisterCh: make(chan *api.Service, 100),
-		DtClient:   atomic.Value{},
-		TrClient:   atomic.Value{},
+		Clients:      sync.Map{},
+		RegisterCh:   make(chan *api.Service, 100),
+		DtClient:     atomic.Value{},
+		TrClient:     atomic.Value{},
+		GlovalConfig: conf,
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterDetectionTrackingPipelineServer(grpcServer, s)

@@ -9,4 +9,4 @@ export REMOTE_SVC_HOST=localhost
 export REMOTE_SVC_PORT=5002
 
 export METRIC_ADDR=localhost
-export METRIC_PORT=8000
+export METRIC_PORT=8001

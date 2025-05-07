@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 
 	api "github.com/etesami/detection-tracking-system/api"
@@ -61,6 +62,7 @@ func main() {
 			SaveImagePath:      os.Getenv("SAVE_IMAGE_PATH"),
 			SaveImageFrequency: saveImageFrq,
 		},
+		Trackers: sync.Map{},
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterDetectionTrackingPipelineServer(grpcServer, s)

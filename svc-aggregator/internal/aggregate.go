@@ -24,7 +24,8 @@ type Server struct {
 	TrClient    atomic.Value
 
 	// Channel for a new client
-	RegisterCh chan *api.Service
+	RegisterCh   chan *api.Service
+	GlovalConfig *Config
 }
 
 // AddClient adds a new client connection data to the server
@@ -41,10 +42,10 @@ func (s *Server) AddClient(address, port string) {
 		log.Printf("Added new client: %s:%s\n", address, port)
 		cfg := Config{
 			VideoSource:        fmt.Sprintf("rtsp://%s:%s/stream", address, port),
-			QueueSize:          120,
-			FrameRate:          10,
-			MaxTotalFrames:     -1, // -1 means no limit
-			DetectionFrequency: 20,
+			QueueSize:          s.GlovalConfig.QueueSize,
+			FrameRate:          float64(s.GlovalConfig.FrameRate),
+			MaxTotalFrames:     s.GlovalConfig.MaxTotalFrames,
+			DetectionFrequency: s.GlovalConfig.DetectionFrequency,
 			ImageWidth:         640,
 			ImageHeight:        360,
 		}
@@ -72,8 +73,7 @@ func (s *Server) RemoveClient(address, port string) {
 // SendDataToServer handles incoming data from clients
 func (s *Server) SendDataToServer(ctx context.Context, recData *pb.Data) (*pb.Ack, error) {
 	recTime := time.Now().Format(time.RFC3339Nano)
-	// recTimestamp := st.UnixMilli()
-	log.Printf("Received at [%s]: [%d]\n", recTime, len(recData.Payload))
+	log.Printf("Received at [%s]: [%d] Bytes\n", recTime, len(recData.Payload))
 
 	// Expect the message to be in the format of host:ip
 	parts := strings.Split(recData.Payload, ":")
@@ -95,20 +95,18 @@ func (s *Server) SendDataToServer(ctx context.Context, recData *pb.Data) (*pb.Ac
 	return ack, nil
 }
 
-// SendFrame sends a frame to the tracker service
-func SendFrame(f api.FrameData, frameByte []byte, clientRef *atomic.Value, dstSvcName string) error {
+// SendFrame sends a frame to the detector/tracker service
+func SendFrame(f api.FrameMetadata, frameByte []byte, clientRef *atomic.Value, dstSvcName string) error {
 	clientIface := clientRef.Load()
 	if clientIface == nil {
 		return fmt.Errorf("client is not initialized")
 	}
 	client := clientIface.(pb.DetectionTrackingPipelineClient)
 
-	meta := api.FrameData{
-		SourceId:  f.SourceId,
-		FrameId:   f.FrameId,
-		Timestamp: f.Timestamp,
+	metaByte, err := json.Marshal(f)
+	if err != nil {
+		return fmt.Errorf("error marshalling metadata: %v", err)
 	}
-	metaByte, _ := json.Marshal(meta)
 
 	d := &pb.FrameData{
 		FrameData:     frameByte,

@@ -11,4 +11,10 @@ export SVC_INGST_ADDR=localhost
 export SVC_INGST_PORT=5002
 
 export METRIC_ADDR=localhost
-export METRIC_PORT=8001
+export METRIC_PORT=8002
+
+
+export FRAME_RATE=5
+export QUEUE_SIZE=180
+export MAX_TOTAL_FRAMES=30
+export DETECTION_FREQUENCY=10
