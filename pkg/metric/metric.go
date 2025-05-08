@@ -8,26 +8,22 @@ import (
 
 var (
 
-	// should be initialized in main
+	// Histograms, should be initialized in main
+	e2eTimeHistogram       *prometheus.HistogramVec
 	sentDataBytesHistogram *prometheus.HistogramVec
 	procTimeHistogram      prometheus.Histogram
-	rttTimeHistogram       *prometheus.HistogramVec
+	transTimeHistogram     *prometheus.HistogramVec
 
-	procTime = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Name: "processing_time_ms",
-			Help: "Gauge of processing times.",
+	frameCountVec = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "frame_count_total",
+			Help: "Total number of frames by status.",
 		},
+		[]string{"status"}, // "processed", "skipped", "empty", "all"
 	)
-	rTTTimes = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "rtt_times_ms",
-			Help: "Gauge of round-trip times for different services.",
-		},
-		[]string{"service"})
 )
 
-func (m *Metric) RegisterMetrics(sentDataBuckets, procTimeBuckets, rttTimeBuckets []float64) {
+func (m *Metric) RegisterMetrics(sentDataBuckets, procTimeBuckets, transitTimeBuckets, e2eTimeBuckets []float64) {
 
 	if sentDataBuckets == nil {
 		sentDataBuckets = prometheus.DefBuckets
@@ -35,9 +31,21 @@ func (m *Metric) RegisterMetrics(sentDataBuckets, procTimeBuckets, rttTimeBucket
 	if procTimeBuckets == nil {
 		procTimeBuckets = prometheus.DefBuckets
 	}
-	if rttTimeBuckets == nil {
-		rttTimeBuckets = prometheus.DefBuckets
+	if transitTimeBuckets == nil {
+		transitTimeBuckets = prometheus.DefBuckets
 	}
+	if e2eTimeBuckets == nil {
+		e2eTimeBuckets = prometheus.DefBuckets
+	}
+
+	e2eTimeHistogram = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "e2e_latency_ms_histogram",
+			Help:    "End-to-end latency times.",
+			Buckets: e2eTimeBuckets,
+		},
+		[]string{"service"},
+	)
 
 	sentDataBytesHistogram = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -47,6 +55,7 @@ func (m *Metric) RegisterMetrics(sentDataBuckets, procTimeBuckets, rttTimeBucket
 		},
 		[]string{"service"},
 	)
+
 	procTimeHistogram = prometheus.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "processing_time_ms_histogram",
@@ -54,11 +63,12 @@ func (m *Metric) RegisterMetrics(sentDataBuckets, procTimeBuckets, rttTimeBucket
 			Buckets: procTimeBuckets,
 		},
 	)
-	rttTimeHistogram = prometheus.NewHistogramVec(
+
+	transTimeHistogram = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "rtt_times_ms_histogram",
 			Help:    "Histogram of round-trip times.",
-			Buckets: rttTimeBuckets,
+			Buckets: transitTimeBuckets,
 		},
 		[]string{"service"},
 	)
@@ -66,9 +76,9 @@ func (m *Metric) RegisterMetrics(sentDataBuckets, procTimeBuckets, rttTimeBucket
 	// Register the metrics with Prometheus
 	prometheus.MustRegister(sentDataBytesHistogram)
 	prometheus.MustRegister(procTimeHistogram)
-	prometheus.MustRegister(rttTimeHistogram)
-	prometheus.MustRegister(procTime)
-	prometheus.MustRegister(rTTTimes)
+	prometheus.MustRegister(transTimeHistogram)
+	prometheus.MustRegister(e2eTimeHistogram)
+	prometheus.MustRegister(frameCountVec)
 }
 
 type Metric struct {
@@ -85,14 +95,24 @@ func (m *Metric) AddProcessingTime(s string, time float64) {
 	m.lock()
 	defer m.unlock()
 	procTimeHistogram.Observe(time)
-	procTime.Set(time)
 }
 
-func (m *Metric) AddRttTime(s string, time float64) {
+func (m *Metric) AddTransitTime(s string, time float64) {
 	m.lock()
 	defer m.unlock()
-	rttTimeHistogram.WithLabelValues(s).Observe(time)
-	rTTTimes.WithLabelValues(s).Set(time)
+	transTimeHistogram.WithLabelValues(s).Observe(time)
+}
+
+func (m *Metric) AddE2ETimes(s string, time float64) {
+	m.lock()
+	defer m.unlock()
+	e2eTimeHistogram.WithLabelValues(s).Observe(time)
+}
+
+func (m *Metric) AddFrameCount(s string, count float64) {
+	m.lock()
+	defer m.unlock()
+	frameCountVec.WithLabelValues(s).Add(count)
 }
 
 func (m *Metric) lock() {
