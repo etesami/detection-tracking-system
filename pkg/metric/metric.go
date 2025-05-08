@@ -16,8 +16,8 @@ var (
 
 	frameCountVec = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "frame_count_total",
-			Help: "Total number of frames by status.",
+			Name: "frame_count",
+			Help: "Frame count by status.",
 		},
 		[]string{"status"}, // "processed", "skipped", "empty", "all"
 	)
