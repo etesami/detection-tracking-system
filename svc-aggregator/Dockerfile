@@ -9,7 +9,7 @@
 #   --env-file .env \
 #   registry.skycluster.io/svc-aggregator:0.0.1
 
-FROM registry.skycluster.io/opencv:4.11.0 AS build
+FROM registry.skycluster.io/opencv:4.11.0-custom AS build
 
 WORKDIR /app
 

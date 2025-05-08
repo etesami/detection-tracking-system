@@ -4,7 +4,6 @@ go 1.23.8
 
 require (
 	github.com/prometheus/client_golang v1.22.0
-	gocv.io/x/gocv v0.41.0
 	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.6
 )

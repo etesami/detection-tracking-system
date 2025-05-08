@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"os"
 	"time"
 
 	"gocv.io/x/gocv"
@@ -32,6 +33,10 @@ func (c *DtConfig) ProcessFrame(frame []byte, frameId int) ([]image.Rectangle, [
 	defer img.Close()
 
 	// open DNN object tracking model
+	info, err := os.Stat(c.Model)
+	if err != nil || info.Size() == 0 {
+		log.Fatalf("Model file is missing or empty: %v, %v", c.Model, err)
+	}
 	net := gocv.ReadNetFromONNX(c.Model)
 	if net.Empty() {
 		log.Printf("Error reading network model from : %v\n", c.Model)
