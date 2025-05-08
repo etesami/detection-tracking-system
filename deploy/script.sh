@@ -1,5 +1,21 @@
 #!/bin/bash
 
+HELP="
+Usage: build-upload.sh [OPTIONS]
+  -b build
+  -u upload
+"
+
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    -b|--build) build=1 ;;
+    -u|--upload) upload=1 ;;
+    *) echo $HELP; exit 1 ;;
+  esac
+  shift
+done
+
+source $HOME/.functions.sh
 
 # function
 build() {
@@ -23,20 +39,19 @@ DIR=$(dirname "$(pwd)")
 
 TAG=0.0.3
 
-SVC_NAME=svc-aggregator
-build $SVC_NAME $TAG
-upload $SVC_NAME $TAG
+SERVICES=("svc-aggregator" "svc-detector" "svc-tracker")
 
-SVC_NAME=svc-detector
-build $SVC_NAME $TAG
-upload $SVC_NAME $TAG
+for SVC_NAME in "${SERVICES[@]}"; do
+  [[ $build -eq 1 ]] && build $SVC_NAME $TAG
+  [[ $upload -eq 1 ]] && upload $SVC_NAME $TAG
+done
+
 
 # This require ffmpeg, esn-k8s-2
 # SVC_NAME=svc-rtsp-server
-# build $SVC_NAME $TAG
-# upload $SVC_NAME $TAG
-
-SVC_NAME=svc-tracker
-build $SVC_NAME $TAG
-upload $SVC_NAME $TAG
-
+# if [[ $build -eq 1 ]]; then
+#   build $SVC_NAME $TAG
+# fi
+# if [[ $upload -eq 1 ]]; then
+#   upload $SVC_NAME $TAG
+# fi

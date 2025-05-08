@@ -46,10 +46,21 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 		return nil, err
 	}
 
-	log.Printf("Frame [%d]: Received: [%d] Bytes\n", metadata.FrameId, len(recData.FrameData))
-
 	// process the frame data
 	iboxes, indicies := s.DtConfig.ProcessFrame(recData.FrameData, int(metadata.FrameId))
+
+	ack := &pb.Ack{
+		Status:                "ok",
+		OriginalSentTimestamp: recData.SentTimestamp,
+		ReceivedTimestamp:     recTime,
+		AckSentTimestamp:      time.Now().Format(time.RFC3339Nano),
+	}
+
+	if len(indicies) == 0 {
+		log.Printf("Frame [%d]: No boxes detected.", metadata.FrameId)
+		return ack, nil
+	}
+
 	selectedBoxes := make([]image.Rectangle, 0, len(indicies))
 	// select only boxes with indicies
 	for i := range indicies {
@@ -98,13 +109,6 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 			int(metadata.FrameId), len(sBoxes), pong.Status, float64(rtt)/1000.0)
 
 	}(selectedBoxes, metadata)
-
-	ack := &pb.Ack{
-		Status:                "ok",
-		OriginalSentTimestamp: recData.SentTimestamp,
-		ReceivedTimestamp:     recTime,
-		AckSentTimestamp:      time.Now().Format(time.RFC3339Nano),
-	}
 
 	return ack, nil
 }

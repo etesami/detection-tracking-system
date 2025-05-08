@@ -2,12 +2,12 @@
 # then upload to registry
 
 # sudo docker run \
-#   -v /tmp/videos:/root/videos \
 #   -p 8002:8001 \
 #   -p 50052:50052 \
 #   --pull always \
 #   --env-file .env \
-#   registry.skycluster.io/svc-aggregator:0.0.1
+#   --rm \
+#   registry.skycluster.io/svc-aggregator:0.0.3
 
 FROM registry.skycluster.io/opencv:4.11.0-custom AS build
 

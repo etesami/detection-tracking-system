@@ -1,4 +1,5 @@
 # sudo docker build . -t svc-detector:0.0.3 -t registry.skycluster.io/svc-detector:0.0.3
+# sudo docker build . -t svc-detector:local 
 
 # sudo docker run \
 #   -v /tmp/videos:/root/videos \

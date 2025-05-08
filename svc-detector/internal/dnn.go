@@ -83,7 +83,7 @@ func (c *DtConfig) detect(net *gocv.Net, src *gocv.Mat, outputNames []string) ([
 
 	boxes, confidences, classIds := performDetection(probs)
 	if len(boxes) == 0 {
-		log.Println("No classes detected")
+		// log.Println("No classes detected")
 		return nil, nil
 	}
 

@@ -74,7 +74,7 @@ func (s *Server) AddDetections(sourceId string, frameId int64, frame []byte, det
 			frameId, sourceName, len(detections), sourceId)
 
 	} else {
-		log.Printf("Frame [%d], [%s]: Tracker already exists, updating boxes [%s]", frameId, sourceName, sourceId)
+		// log.Printf("Frame [%d], [%s]: Tracker already exists, updating boxes [%s]", frameId, sourceName, sourceId)
 
 		// Iterate over each detection
 		for i, bb := range detections {
@@ -100,7 +100,7 @@ func (s *Server) AddDetections(sourceId string, frameId int64, frame []byte, det
 			// log.Printf("Frame [%d], [%s]: Detection [%d] IoU: %f", frameId, sourceName, i, iou)
 		}
 
-		log.Printf("Frame [%d], [%s]: Mathces: [%d], Unmatched: [%d]",
+		log.Printf("Frame [%d], [%s]: Updating tracker. Mathces: [%d], Unmatched: [%d]",
 			frameId, sourceName, len(matches), len(notMatched))
 
 		// If the object is already being tracked, update its position
@@ -174,7 +174,7 @@ func (s *Server) TrackObjects(frame []byte, metadata *api.FrameMetadata) {
 		return true // continue iteration
 	})
 
-	log.Printf("Frame [%d], [%s]: Lost trackings: [%d]/ [%d]",
+	log.Printf("Frame [%d], [%s]: Lost trackings: [%d/%d]",
 		metadata.FrameId, sourceName, len(lostInstances), totalDetections)
 
 	// Delete lost instances
@@ -183,7 +183,9 @@ func (s *Server) TrackObjects(frame []byte, metadata *api.FrameMetadata) {
 		trClient.DeleteInstanceAt(i)
 		deleted++
 	}
-	log.Printf("Frame [%d], [%s]: Deleted [%d] lost trackings.", metadata.FrameId, sourceName, deleted)
+	if deleted > 0 {
+		log.Printf("Frame [%d], [%s]: Deleted [%d] lost trackings.", metadata.FrameId, sourceName, deleted)
+	}
 
 	if s.DtConfig.SaveImage && metadata.FrameId%int64(s.DtConfig.SaveImageFrequencyTr) == 0 {
 		timestamp := time.Now().UnixNano()
