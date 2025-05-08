@@ -11,7 +11,7 @@ var (
 	// Histograms, should be initialized in main
 	e2eTimeHistogram       *prometheus.HistogramVec
 	sentDataBytesHistogram *prometheus.HistogramVec
-	procTimeHistogram      prometheus.Histogram
+	procTimeHistogram      *prometheus.HistogramVec
 	transTimeHistogram     *prometheus.HistogramVec
 
 	frameCountVec = prometheus.NewCounterVec(
@@ -40,8 +40,8 @@ func (m *Metric) RegisterMetrics(sentDataBuckets, procTimeBuckets, transitTimeBu
 
 	e2eTimeHistogram = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "e2e_latency_ms_histogram",
-			Help:    "End-to-end latency times.",
+			Name:    "e2e_time_ms_histogram",
+			Help:    "Histogram of end-to-end latency times.",
 			Buckets: e2eTimeBuckets,
 		},
 		[]string{"service"},
@@ -56,18 +56,19 @@ func (m *Metric) RegisterMetrics(sentDataBuckets, procTimeBuckets, transitTimeBu
 		[]string{"service"},
 	)
 
-	procTimeHistogram = prometheus.NewHistogram(
+	procTimeHistogram = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "processing_time_ms_histogram",
-			Help:    "Histogram of processing times.",
+			Help:    "Histogram of processing latency times.",
 			Buckets: procTimeBuckets,
 		},
+		[]string{"service"},
 	)
 
 	transTimeHistogram = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "rtt_times_ms_histogram",
-			Help:    "Histogram of round-trip times.",
+			Name:    "transit_time_ms_histogram",
+			Help:    "Histogram of round-trip latency times.",
 			Buckets: transitTimeBuckets,
 		},
 		[]string{"service"},
@@ -94,7 +95,7 @@ func (m *Metric) AddSentDataBytes(s string, bytes float64) {
 func (m *Metric) AddProcessingTime(s string, time float64) {
 	m.lock()
 	defer m.unlock()
-	procTimeHistogram.Observe(time)
+	procTimeHistogram.WithLabelValues(s).Observe(time)
 }
 
 func (m *Metric) AddTransitTime(s string, time float64) {
