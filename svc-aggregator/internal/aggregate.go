@@ -72,7 +72,7 @@ func (s *Server) RemoveClient(address, port string) {
 // SendDataToServer handles incoming data from clients
 func (s *Server) SendDataToServer(ctx context.Context, recData *pb.Data) (*pb.Ack, error) {
 	recTime := time.Now().Format(time.RFC3339Nano)
-	log.Printf("Received at [%s]: [%d] Bytes\n", recTime, len(recData.Payload))
+	// log.Printf("Received at [%s]: [%d] Bytes\n", recTime, len(recData.Payload))
 
 	// Expect the message to be in the format of host:ip
 	parts := strings.Split(recData.Payload, ":")
@@ -121,6 +121,9 @@ func SendFrame(f api.FrameMetadata, frameByte []byte, clientRef *utils.GrpcClien
 	if err != nil {
 		return fmt.Errorf("error calculating RTT: %v", err)
 	}
-	log.Printf("Sent frame [%d], [%s] response: [%s], RTT [%.2f] ms\n", f.FrameId, dstSvcName, pong.Status, float64(rtt)/1000.0)
+	sTime, _ := time.Parse(time.RFC3339Nano, d.SentTimestamp)
+	eTime, _ := time.Parse(time.RFC3339Nano, pong.ReceivedTimestamp)
+	elapsed := eTime.Sub(sTime)
+	log.Printf("Sent frame [%d], [%s] response: [%s], RTT [%.2f]ms, Total [%.2f]ms", f.FrameId, dstSvcName, pong.Status, float64(rtt)/1000.0, float64(elapsed)/1000.0)
 	return nil
 }

@@ -139,7 +139,7 @@ func (vi *VideoInput) readFrames() {
 				resized.Close()
 				return
 			default:
-				log.Printf("Frame [%d], queue is full, dropping frame", frameData.metadata.FrameId)
+				// log.Printf("Frame [%d], queue is full, dropping frame", frameData.metadata.FrameId)
 				// If the queue is full, we can choose to drop the frame or wait
 				resized.Close()
 				vi.frameSkipped++
