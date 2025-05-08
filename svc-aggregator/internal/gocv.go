@@ -8,6 +8,7 @@ import (
 	"time"
 
 	api "github.com/etesami/detection-tracking-system/api"
+	mt "github.com/etesami/detection-tracking-system/pkg/metric"
 	"github.com/etesami/detection-tracking-system/pkg/utils"
 
 	"gocv.io/x/gocv"
@@ -55,7 +56,7 @@ type VideoInput struct {
 }
 
 // NewVideoInput creates and initializes a new VideoInput instance
-func NewVideoInput(config *Config, dtClient, trClient *utils.GrpcClient) (*VideoInput, error) {
+func NewVideoInput(config *Config, dtClient, trClient *utils.GrpcClient, m *mt.Metric) (*VideoInput, error) {
 
 	log.Printf("Initializing video input with source: %s\n", config.VideoSource)
 	capture, err := gocv.OpenVideoCapture(config.VideoSource)
@@ -75,8 +76,8 @@ func NewVideoInput(config *Config, dtClient, trClient *utils.GrpcClient) (*Video
 	}
 
 	vi.wg.Add(2) // Add 2 to the WaitGroup for readFrames and processFrames
-	go vi.readFrames()
-	go vi.processFrames()
+	go vi.readFrames(m)
+	go vi.processFrames(m)
 	// Close the video input when done
 	go vi.handleClose()
 
@@ -84,14 +85,14 @@ func NewVideoInput(config *Config, dtClient, trClient *utils.GrpcClient) (*Video
 }
 
 // readFrames reads frames from the video source and processes them
-func (vi *VideoInput) readFrames() {
+func (vi *VideoInput) readFrames(m *mt.Metric) {
 	defer vi.wg.Done() // Mark this goroutine as done when it finishes
 
 	img := gocv.NewMat()
 	defer img.Close()
 
-	delay := 1.0 / vi.config.FrameRate // Calculate delay based on frame rate
-	log.Printf("Frame rate: %.2f, delay: %.2f seconds\n", vi.config.FrameRate, delay)
+	delay := (1.0 * 1000.0) / vi.config.FrameRate // Calculate delay (ms) based on frame rate
+	log.Printf("Frame rate: %.2ffps, delay: %.2fms", vi.config.FrameRate, delay)
 	emptyFrames := 0
 
 	for {
@@ -105,6 +106,7 @@ func (vi *VideoInput) readFrames() {
 			if ok := vi.capture.Read(&img); !ok || img.Empty() {
 				log.Println("Error reading frame")
 				emptyFrames++
+				increaseEmptyFrames(m)
 				if emptyFrames > 10 {
 					log.Println("Too many empty frames, stopping video input")
 					vi.Signal.Close() // Signal to stop processing and clean up
@@ -114,6 +116,8 @@ func (vi *VideoInput) readFrames() {
 				continue
 			}
 			emptyFrames = 0
+
+			increaseTotalFrames(m, vi)
 
 			// Resize the image, should not close the resized image as it is passed to the queue
 			// and should be closed in the consumer processFrames
@@ -131,7 +135,6 @@ func (vi *VideoInput) readFrames() {
 
 			select {
 			case vi.queue <- frameData:
-				vi.frameCount++
 			case <-vi.Signal.Done:
 				log.Println("Stopping video input processing")
 				// since resized is closed in the consumer processFrames
@@ -142,18 +145,20 @@ func (vi *VideoInput) readFrames() {
 				// log.Printf("Frame [%d], queue is full, dropping frame", frameData.metadata.FrameId)
 				// If the queue is full, we can choose to drop the frame or wait
 				resized.Close()
-				vi.frameSkipped++
+				increaseSkippedFrames(m, vi)
 			}
 
-			elapsed := float64(time.Since(startT).Milliseconds()) / 1000.0
+			addProcessingTime("reading", m, startT)
+			elapsed := float64(time.Since(startT).Milliseconds())
 			sleepDuration := delay - elapsed
+
 			if frameData.metadata.FrameId%100 == 0 {
-				log.Printf("[%d] frames processed. Time: %.2fs, Sleep: %.2fs, Skipped frames: [%d]\n",
+				log.Printf("[%d] frames processed. Time: %.2fms, Sleep: %.2fms, Skipped frames: [%d]\n",
 					frameData.metadata.FrameId, elapsed, sleepDuration, vi.frameSkipped)
 			}
 
 			if sleepDuration > 0 {
-				time.Sleep(time.Duration(sleepDuration) * time.Second)
+				time.Sleep(time.Duration(sleepDuration) * time.Millisecond)
 			}
 
 			if vi.config.MaxTotalFrames > 0 && frameData.metadata.FrameId >= int64(vi.config.MaxTotalFrames) {
@@ -168,9 +173,10 @@ func (vi *VideoInput) readFrames() {
 }
 
 // processFrames processes frames from the queue
-func (vi *VideoInput) processFrames() {
+func (vi *VideoInput) processFrames(m *mt.Metric) {
 	defer vi.wg.Done()
 	for {
+		stTime := time.Now()
 		select {
 		case f, ok := <-vi.queue:
 			if !ok {
@@ -181,8 +187,9 @@ func (vi *VideoInput) processFrames() {
 			buf, err := gocv.IMEncode(gocv.PNGFileExt, f.frame)
 			if err != nil {
 				log.Printf("Failed to encode frame: %v", err)
-				vi.frameSkipped++
 				f.frame.Close()
+				// If the frame is not valid, we silently skip it and do not record it
+				// We are interested inly in frames skipped due to queue overflow
 				continue
 			}
 
@@ -201,14 +208,16 @@ func (vi *VideoInput) processFrames() {
 			frameCopy := make([]byte, len(buf.GetBytes()))
 			copy(frameCopy, buf.GetBytes())
 			// Send the frame to the remote service using gRPC
-			go func(m api.FrameMetadata, frame []byte, c *utils.GrpcClient, s string) {
-				if err := SendFrame(f.metadata, frame, c, s); err != nil {
+			go func(fm api.FrameMetadata, frame []byte, c *utils.GrpcClient, s string) {
+				if err := SendFrame(f.metadata, frame, c, m, s); err != nil {
 					log.Printf("failed to send frame: %v", err)
-					vi.frameSkipped++
+					increaseSkippedFrames(m, vi)
 				} else {
-					vi.frameProcessed++
+					increaseProcessedFrames(m, vi)
 				}
 			}(f.metadata, frameCopy, client, service)
+
+			addProcessingTime("processing", m, stTime)
 
 			buf.Close()
 			f.frame.Close() // Close the frame after processing

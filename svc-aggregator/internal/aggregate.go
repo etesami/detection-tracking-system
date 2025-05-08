@@ -10,8 +10,10 @@ import (
 	"time"
 
 	api "github.com/etesami/detection-tracking-system/api"
+	mt "github.com/etesami/detection-tracking-system/pkg/metric"
 	pb "github.com/etesami/detection-tracking-system/pkg/protoc"
 	"github.com/etesami/detection-tracking-system/pkg/utils"
+	"google.golang.org/protobuf/proto"
 )
 
 type Server struct {
@@ -25,6 +27,8 @@ type Server struct {
 	// Channel for a new client
 	RegisterCh   chan *api.Service
 	GlovalConfig *Config
+
+	Metric *mt.Metric
 }
 
 // AddClient adds a new client connection data to the server
@@ -48,7 +52,7 @@ func (s *Server) AddClient(address, port string) {
 			ImageWidth:         640,
 			ImageHeight:        360,
 		}
-		if vi, err := NewVideoInput(&cfg, &s.DtClient, &s.TrClient); err != nil {
+		if vi, err := NewVideoInput(&cfg, &s.DtClient, &s.TrClient, s.Metric); err != nil {
 			log.Printf("Error creating video input: %v\n", err)
 			return
 		} else {
@@ -95,7 +99,7 @@ func (s *Server) SendDataToServer(ctx context.Context, recData *pb.Data) (*pb.Ac
 }
 
 // SendFrame sends a frame to the detector/tracker service
-func SendFrame(f api.FrameMetadata, frameByte []byte, clientRef *utils.GrpcClient, dstSvcName string) error {
+func SendFrame(f api.FrameMetadata, frameByte []byte, clientRef *utils.GrpcClient, m *mt.Metric, dstSvcName string) error {
 	client := clientRef.Load()
 	if client == nil {
 		return fmt.Errorf("client is not initialized")
@@ -116,14 +120,21 @@ func SendFrame(f api.FrameMetadata, frameByte []byte, clientRef *utils.GrpcClien
 	if err != nil {
 		return fmt.Errorf("error sending frame to server: %v", err)
 	}
+	dByte, _ := proto.Marshal(d)
+	addSentDataBytes(dstSvcName, m, float64(len(dByte)))
 
-	rtt, err := utils.CalculateRtt(d.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, time.Now().Format(time.RFC3339Nano))
+	now := time.Now()
+	transTime, err := utils.CalculateRtt(d.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, now.Format(time.RFC3339Nano))
 	if err != nil {
 		return fmt.Errorf("error calculating RTT: %v", err)
 	}
+
 	sTime, _ := time.Parse(time.RFC3339Nano, d.SentTimestamp)
-	eTime, _ := time.Parse(time.RFC3339Nano, pong.ReceivedTimestamp)
-	elapsed := eTime.Sub(sTime)
-	log.Printf("Sent frame [%d], [%s] response: [%s], RTT [%.2f]ms, Total [%.2f]ms", f.FrameId, dstSvcName, pong.Status, float64(rtt)/1000.0, float64(elapsed)/1000.0)
+	e2eSvcLatency := float64(now.Sub(sTime).Microseconds()) / 1000.0
+
+	addTransitTime(dstSvcName, m, transTime)
+	addE2ELatency(dstSvcName, m, e2eSvcLatency)
+
+	log.Printf("Sent frame [%d], [%s] response: [%s], RTT [%.2f]ms, Total [%.2f]ms", f.FrameId, dstSvcName, pong.Status, transTime, e2eSvcLatency)
 	return nil
 }

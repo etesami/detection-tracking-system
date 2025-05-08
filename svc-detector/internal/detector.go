@@ -8,14 +8,18 @@ import (
 	"time"
 
 	api "github.com/etesami/detection-tracking-system/api"
+	mt "github.com/etesami/detection-tracking-system/pkg/metric"
 	pb "github.com/etesami/detection-tracking-system/pkg/protoc"
 	"github.com/etesami/detection-tracking-system/pkg/utils"
+	"google.golang.org/protobuf/proto"
 )
 
 type Server struct {
 	pb.UnimplementedDetectionTrackingPipelineServer
 	TrackerClientRef utils.GrpcClient
 	DtConfig         *DtConfig
+
+	Metric *mt.Metric
 }
 
 type detectionData struct {
@@ -37,8 +41,8 @@ type DtConfig struct {
 
 // SendFrameServer handles incoming data from ingestion/aggregation services
 func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (*pb.Ack, error) {
-	recTime := time.Now().Format(time.RFC3339Nano)
-
+	recTime := time.Now()
+	recTimeNano := recTime.Format(time.RFC3339Nano)
 	// unmarshal metadata into a struct
 	var metadata api.FrameMetadata
 	if err := json.Unmarshal([]byte(recData.Metadata), &metadata); err != nil {
@@ -52,7 +56,7 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 	ack := &pb.Ack{
 		Status:                "ok",
 		OriginalSentTimestamp: recData.SentTimestamp,
-		ReceivedTimestamp:     recTime,
+		ReceivedTimestamp:     recTimeNano,
 		AckSentTimestamp:      time.Now().Format(time.RFC3339Nano),
 	}
 
@@ -70,6 +74,8 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 		}
 		selectedBoxes = append(selectedBoxes, iboxes[indicies[i]])
 	}
+
+	addProcessingTime("processing", s.Metric, recTime)
 
 	go func(sBoxes []image.Rectangle, metadata api.FrameMetadata) {
 		// construct the message for tracker service
@@ -91,22 +97,33 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 			return
 		}
 
-		d := pb.FrameData{
+		d := &pb.FrameData{
 			Metadata:      string(mByte),
 			FrameData:     recData.FrameData,
 			SentTimestamp: time.Now().Format(time.RFC3339Nano), // the current timestamp
 		}
-		pong, err := c.SendDetectedFrameToServer(context.Background(), &d)
+		dByte, _ := proto.Marshal(d)
+		addSentDataBytes("tracker", s.Metric, float64(len(dByte)))
+
+		pong, err := c.SendDetectedFrameToServer(context.Background(), d)
 		if err != nil {
 			log.Printf("error sending frame to server: %v", err)
 		}
 
-		rtt, err := utils.CalculateRtt(d.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, time.Now().Format(time.RFC3339Nano))
+		now := time.Now()
+		transTime, err := utils.CalculateRtt(d.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, now.Format(time.RFC3339Nano))
 		if err != nil {
 			log.Printf("error calculating RTT: %v", err)
 		}
-		log.Printf("Sent frame [%d] with [%d] detections, response: [%s], RTT [%.2f] ms\n",
-			int(metadata.FrameId), len(sBoxes), pong.Status, float64(rtt)/1000.0)
+
+		sTime, _ := time.Parse(time.RFC3339Nano, d.SentTimestamp)
+		e2eSvcLatency := float64(now.Sub(sTime).Microseconds()) / 1000.0
+
+		addTransitTime("tracker", s.Metric, transTime)
+		addE2ELatency("tracker", s.Metric, e2eSvcLatency)
+
+		log.Printf("Sent frame [%d] with [%d] detections, response: [%s], RTT [%.2f]ms, Total [%.2f]ms",
+			int(metadata.FrameId), len(sBoxes), pong.Status, transTime, e2eSvcLatency)
 
 	}(selectedBoxes, metadata)
 

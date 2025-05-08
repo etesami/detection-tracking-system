@@ -3,7 +3,7 @@ module github.com/etesami/detection-tracking-system/svc-aggregator
 go 1.23.8
 
 require (
-	github.com/etesami/detection-tracking-system v0.0.0-20250507070356-2506d859a077
+	github.com/etesami/detection-tracking-system v0.0.0-20250508195059-1b76afa59c39
 	github.com/prometheus/client_golang v1.22.0
 	gocv.io/x/gocv v0.41.0
 	google.golang.org/grpc v1.72.0

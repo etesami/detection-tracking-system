@@ -1,4 +1,5 @@
-# sudo docker build . -t svc-aggregator -t registry.skycluster.io/svc-aggregator:0.0.1
+# sudo docker build . -t svc-aggregator:0.0.1 -t registry.skycluster.io/svc-aggregator:0.0.1
+# sudo docker build . -t svc-aggregator:local
 # then upload to registry
 
 # sudo docker run \

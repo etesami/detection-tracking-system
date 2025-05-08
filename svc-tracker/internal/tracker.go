@@ -11,6 +11,7 @@ import (
 	"time"
 
 	api "github.com/etesami/detection-tracking-system/api"
+	mt "github.com/etesami/detection-tracking-system/pkg/metric"
 	pb "github.com/etesami/detection-tracking-system/pkg/protoc"
 	"gocv.io/x/gocv"
 )
@@ -19,6 +20,8 @@ type Server struct {
 	pb.UnimplementedDetectionTrackingPipelineServer
 	Trackers map[string]*TrackerClient
 	DtConfig *DtConfig
+
+	Metric *mt.Metric
 }
 
 type detectionData struct {
@@ -214,7 +217,8 @@ func (s *Server) TrackObjects(frame []byte, metadata *api.FrameMetadata) {
 
 // SendFrameToServer handles incoming data from ingestion/aggregation services
 func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (*pb.Ack, error) {
-	recTime := time.Now().Format(time.RFC3339Nano)
+	recTime := time.Now()
+	recTimeNano := recTime.Format(time.RFC3339Nano)
 
 	// unmarshal metadata into a struct
 	var metadata api.FrameMetadata
@@ -226,11 +230,12 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 	// log.Printf("Frame [%d], [%s]: Received: [%d] Bytes\n", metadata.FrameId, "Track", len(recData.FrameData))
 
 	s.TrackObjects(recData.FrameData, &metadata)
+	addProcessingTime("tracking", s.Metric, recTime)
 
 	ack := &pb.Ack{
 		Status:                "ok",
 		OriginalSentTimestamp: recData.SentTimestamp,
-		ReceivedTimestamp:     recTime,
+		ReceivedTimestamp:     recTimeNano,
 		AckSentTimestamp:      time.Now().Format(time.RFC3339Nano),
 	}
 
@@ -239,7 +244,8 @@ func (s *Server) SendFrameToServer(ctx context.Context, recData *pb.FrameData) (
 
 // SendFrameServer handles incoming data from detector service
 func (s *Server) SendDetectedFrameToServer(ctx context.Context, recData *pb.FrameData) (*pb.Ack, error) {
-	recTime := time.Now().Format(time.RFC3339Nano)
+	recTime := time.Now()
+	recTimeNano := recTime.Format(time.RFC3339Nano)
 
 	// unmarshal metadata into a struct
 	var metadata detectionData
@@ -253,11 +259,12 @@ func (s *Server) SendDetectedFrameToServer(ctx context.Context, recData *pb.Fram
 	// Go routine for adding/updating the detection data and managing the
 	// tracker instances
 	s.AddDetections(metadata.SourceId, metadata.FrameId, recData.FrameData, metadata.Boxes)
+	addProcessingTime("adding-detection", s.Metric, recTime)
 
 	ack := &pb.Ack{
 		Status:                "ok",
 		OriginalSentTimestamp: recData.SentTimestamp,
-		ReceivedTimestamp:     recTime,
+		ReceivedTimestamp:     recTimeNano,
 		AckSentTimestamp:      time.Now().Format(time.RFC3339Nano),
 	}
 

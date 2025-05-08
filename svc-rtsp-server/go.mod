@@ -6,7 +6,7 @@ require (
 	github.com/asticode/go-astits v1.13.0
 	github.com/bluenviron/gortsplib/v4 v4.13.1
 	github.com/bluenviron/mediacommon/v2 v2.1.0
-	github.com/etesami/detection-tracking-system v0.0.0-20250507070356-2506d859a077
+	github.com/etesami/detection-tracking-system v0.0.0-20250508195059-1b76afa59c39
 	github.com/prometheus/client_golang v1.22.0
 )
 

@@ -25,11 +25,12 @@ import (
 func main() {
 
 	// Setup the metric service for tracking metrics both locally and remote services
-	sentDataBuckets := utils.ParseBuckets(os.Getenv("SENT_DATA_BUCKETS"))
+	e2eTimeBuckets := utils.ParseBuckets(os.Getenv("E2E_TIME_BUCKETS"))
 	procTimeBuckets := utils.ParseBuckets(os.Getenv("PROC_TIME_BUCKETS"))
-	rttTimeBuckets := utils.ParseBuckets(os.Getenv("RTT_TIME_BUCKETS"))
+	sentDataByteBuckets := utils.ParseBuckets(os.Getenv("SENT_DATA_BYTE_BUCKETS"))
+	transTimeBuckets := utils.ParseBuckets(os.Getenv("TRANSMIT_TIME_BUCKETS"))
 	m := &metric.Metric{}
-	m.RegisterMetrics(sentDataBuckets, procTimeBuckets, rttTimeBuckets)
+	m.RegisterMetrics(sentDataByteBuckets, procTimeBuckets, transTimeBuckets, e2eTimeBuckets)
 
 	// Local service initialization (detector) to receive frames
 	svcHost := os.Getenv("SVC_TRACKER_HOST")
@@ -64,6 +65,7 @@ func main() {
 			SaveImageFrequencyDt: saveImageFrqDt,
 		},
 		Trackers: make(map[string]*internal.TrackerClient),
+		Metric:   m,
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterDetectionTrackingPipelineServer(grpcServer, s)
