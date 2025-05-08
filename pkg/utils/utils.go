@@ -29,8 +29,8 @@ func CalculateRtt(msgSentTime, msgRecTime, ackSentTime, ackRecTime string) (floa
 	}
 	t1 := msgRecTime1.Sub(msgSentTime1)
 	t2 := ackRecTime1.Sub(ackSentTime1)
-	rtt := float64(t1+t2) / 1000.0
-	return rtt, nil
+	rtt := t1 + t2
+	return float64(rtt.Milliseconds()), nil
 }
 
 func StrUnixToTime(unixStr string) (time.Time, error) {
