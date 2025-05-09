@@ -18,14 +18,21 @@ type Server struct {
 }
 
 // processTicker processes the ticker event
-func ProcessTicker(clientRef *utils.GrpcClient, serverName string, m *metric.Metric, rtspPort string) error {
+func ProcessTicker(clientRef *utils.GrpcClient, serverName, extIp string, m *metric.Metric, rtspPort string) error {
 
 	client := clientRef.Load()
 	if client == nil {
 		return nil
 	}
 
+	// because we run this inside a docker, then the outbound IP is not the same as the host IP
+	// so we need to get the outbound IP of the container manually from the environment
 	ip, err := utils.GetOutboundIP()
+	if extIp == "" {
+		log.Printf("External IP is not set, using default outbound IP")
+	} else {
+		ip = extIp
+	}
 	if err != nil {
 		log.Printf("Error getting outbound IP: %v", err)
 	}

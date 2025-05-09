@@ -38,6 +38,7 @@ func main() {
 	}
 
 	// Local rtsp server initialization
+	EXT_IP := os.Getenv("RTSP_SERVER_EXT_IP")
 	RTSP_SERVER_HOST := os.Getenv("RTSP_SERVER_HOST")
 	RTSP_SERVER_PORT := os.Getenv("RTSP_SERVER_PORT")
 	if RTSP_SERVER_HOST == "" || RTSP_SERVER_PORT == "" {
@@ -70,7 +71,7 @@ func main() {
 
 	// First call to processTicker
 	time.Sleep(2 * time.Second) // Wait a few seconds before the first call to let connection be established
-	if err := internal.ProcessTicker(&client, "aggregator", m, RTSP_SERVER_PORT); err != nil {
+	if err := internal.ProcessTicker(&client, "aggregator", EXT_IP, m, RTSP_SERVER_PORT); err != nil {
 		log.Printf("Error during processing: %v", err)
 	}
 
@@ -81,7 +82,7 @@ func main() {
 	log.Printf("Update frequency: %d seconds\n", updateFrequency)
 	go func(m *metric.Metric, c *utils.GrpcClient) {
 		for range ticker.C {
-			if err := internal.ProcessTicker(c, "aggregator", m, RTSP_SERVER_PORT); err != nil {
+			if err := internal.ProcessTicker(c, "aggregator", EXT_IP, m, RTSP_SERVER_PORT); err != nil {
 				log.Printf("Error during processing: %v", err)
 			}
 		}

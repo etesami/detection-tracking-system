@@ -6,8 +6,9 @@
 #   -p 50054:50052 \
 #   --pull always \
 #   --env-file .env \
-#   -ti \
-#   registry.skycluster.io/svc-tracker:0.0.3
+#   --env-file .env_histogram \
+#   --rm \
+#   registry.skycluster.io/svc-tracker:0.0.1
 
 FROM registry.skycluster.io/opencv:4.11.0-custom AS build
 

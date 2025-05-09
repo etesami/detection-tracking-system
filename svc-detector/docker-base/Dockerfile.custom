@@ -1,8 +1,7 @@
 # OpenCV 4 prebuilt multiarchitecture image
 #
 # To build release:
-#   docker buildx build -f Dockerfile.custom -t opencv:4.11.0-custom -t registry.skycluster.io/opencv:4.11.0-custom  --platform=linux/amd64 --load .
-#   docker buildx build -f Dockerfile.custom -t opencv:4.11.0-custom -t registry.skycluster.io/opencv:4.11.0-custom  --platform=linux/arm64 --push .
+#   docker buildx build -f Dockerfile.custom -t registry.skycluster.io/opencv:4.11.0-alpha1  --platform=linux/amd64,linux/arm64 --push .
 #
 
 ###################
@@ -53,6 +52,6 @@ ARG TARGETARCH
 # multiarch build stage
 ###################
 
-FROM opencv-build-${TARGETARCH} as opencv-final
+FROM opencv-build-${TARGETARCH} AS opencv-final
 
 CMD ["opencv_version", "-b"]

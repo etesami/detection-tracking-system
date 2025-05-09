@@ -1,4 +1,4 @@
-# sudo docker build . -t svc-rtsp-server -t registry.skycluster.io/svc-rtsp-server:0.0.1
+# docker buildx build -t registry.skycluster.io/svc-rtsp-server:0.0.7 --platform=linux/amd64,linux/arm64 --push .
 # Once build upload to registry
 
 # sudo docker run \
@@ -11,20 +11,12 @@
 #   --env-file .env_histogram \
 #   registry.skycluster.io/svc-rtsp-server:0.0.5
 
-FROM registry.skycluster.io/ubuntu-24-04-ffmpeg:0.0.1  AS build
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends wget ca-certificates
+###################
+# multiarch build stage
+###################
 
-# Install GO
-RUN wget -P /tmp https://go.dev/dl/go1.23.8.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf /tmp/go1.23.8.linux-amd64.tar.gz && \
-    rm -rf /tmp/go1.23.8.linux-amd64.tar.gz
-    
-ENV GOPATH=/go
-ENV PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
-RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
-
+FROM registry.skycluster.io/ubuntu-24.04-ffmpeg:0.0.2 AS build-final
 
 WORKDIR /app
 
