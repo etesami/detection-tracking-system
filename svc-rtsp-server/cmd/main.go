@@ -21,12 +21,12 @@ import (
 
 func main() {
 
-	// e2eTimeBuckets := utils.ParseBuckets(os.Getenv("E2E_TIME_BUCKETS"))
-	// procTimeBuckets := utils.ParseBuckets(os.Getenv("PROC_TIME_BUCKETS"))
-	// sentDataByteBuckets := utils.ParseBuckets(os.Getenv("SENT_DATA_BYTE_BUCKETS"))
-	// transTimeBuckets := utils.ParseBuckets(os.Getenv("TRANSMIT_TIME_BUCKETS"))
+	e2eTimeBuckets := utils.ParseBuckets(os.Getenv("E2E_TIME_BUCKETS"))
+	procTimeBuckets := utils.ParseBuckets(os.Getenv("PROC_TIME_BUCKETS"))
+	sentDataByteBuckets := utils.ParseBuckets(os.Getenv("SENT_DATA_BYTE_BUCKETS"))
+	transTimeBuckets := utils.ParseBuckets(os.Getenv("TRANSMIT_TIME_BUCKETS"))
 	m := &metric.Metric{}
-	// m.RegisterMetrics(sentDataByteBuckets, procTimeBuckets, transTimeBuckets, e2eTimeBuckets)
+	m.RegisterMetrics(sentDataByteBuckets, procTimeBuckets, transTimeBuckets, e2eTimeBuckets)
 
 	updateFrequencyStr := os.Getenv("UPDATE_FREQUENCY")
 	if updateFrequencyStr == "" {

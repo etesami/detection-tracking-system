@@ -5,9 +5,11 @@
 #   -v /tmp/videos:/root/videos \
 #   -p 8001:8001 \
 #   -p 8554:50052 \
+#   --rm \
 #   --pull always \
 #   --env-file .env \
-#   registry.skycluster.io/svc-rtsp-server:0.0.1
+#   --env-file .env_histogram \
+#   registry.skycluster.io/svc-rtsp-server:0.0.5
 
 FROM registry.skycluster.io/ubuntu-24-04-ffmpeg:0.0.1  AS build
 
@@ -19,8 +21,8 @@ RUN wget -P /tmp https://go.dev/dl/go1.23.8.linux-amd64.tar.gz && \
     tar -C /usr/local -xzf /tmp/go1.23.8.linux-amd64.tar.gz && \
     rm -rf /tmp/go1.23.8.linux-amd64.tar.gz
     
-ENV GOPATH /go
-ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+ENV GOPATH=/go
+ENV PATH=$GOPATH/bin:/usr/local/go/bin:$PATH
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
 
 

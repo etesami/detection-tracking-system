@@ -18,7 +18,7 @@ type Server struct {
 }
 
 // processTicker processes the ticker event
-func ProcessTicker(clientRef *utils.GrpcClient, serverName string, metricList *metric.Metric, rtspPort string) error {
+func ProcessTicker(clientRef *utils.GrpcClient, serverName string, m *metric.Metric, rtspPort string) error {
 
 	client := clientRef.Load()
 	if client == nil {
@@ -40,14 +40,21 @@ func ProcessTicker(clientRef *utils.GrpcClient, serverName string, metricList *m
 			log.Printf("Error sending data to server: %v", err)
 			return
 		}
-		rtt, err := utils.CalculateRtt(ping.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, time.Now().Format(time.RFC3339Nano))
+
+		now := time.Now()
+		transTime, err := utils.CalculateRtt(ping.SentTimestamp, pong.ReceivedTimestamp, pong.AckSentTimestamp, now.Format(time.RFC3339Nano))
 		if err != nil {
-			log.Printf("Error calculating RTT: %v", err)
-			return
+			log.Printf("error calculating RTT: %v", err)
 		}
-		m.AddRttTime(serverName, float64(rtt)/1000.0)
-		log.Printf("Sever response: [%s], RTT [%.2f] ms\n", pong.Status, float64(rtt)/1000.0)
-	}(metricList)
+
+		sTime, _ := time.Parse(time.RFC3339Nano, ping.SentTimestamp)
+		e2eSvcLatency := float64(now.Sub(sTime).Microseconds()) / 1000.0
+
+		addTransitTime("aggregator", m, transTime)
+		addE2ELatency("aggregator", m, e2eSvcLatency)
+
+		log.Printf("Sever response: [%s], Transit [%.2f]ms, Total: [%.2f]ms", pong.Status, transTime, e2eSvcLatency)
+	}(m)
 
 	return nil
 }
