@@ -37,6 +37,14 @@ func main() {
 		log.Fatalf("Error parsing update frequency: %v", err)
 	}
 
+	// Prepare a video file to stream
+	tsFileURL := os.Getenv("TS_FILE_LIST_ADDR")
+	filePath, err := utils.DownloadRandomVideoFile(tsFileURL)
+	if err != nil {
+		log.Fatalf("Error downloading video file: %v", err)
+	}
+	log.Printf("Video file path: %s\n", filePath)
+
 	// Local rtsp server initialization
 	EXT_IP := os.Getenv("RTSP_SERVER_EXT_IP")
 	RTSP_SERVER_HOST := os.Getenv("RTSP_SERVER_HOST")
@@ -45,16 +53,12 @@ func main() {
 		panic("RTSP_SERVER_HOST or RTSP_SERVER_POR   T environment variable is not set")
 	}
 
-	FILEPATH := os.Getenv("FILEPATH")
-	if FILEPATH == "" {
-		panic("FILEPATH environment variable is not set")
-	}
 	localSvc := api.Service{
 		Address: RTSP_SERVER_HOST,
 		Port:    RTSP_SERVER_PORT,
 	}
 
-	go startRTSPStream(localSvc, FILEPATH)
+	go startRTSPStream(localSvc, tsFileURL)
 
 	// Remote service initialization (aggregator)
 	REMOTE_SVC_HOST := os.Getenv("REMOTE_SVC_HOST")

@@ -2,8 +2,14 @@ package utils
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"math/rand"
 	"net"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +22,66 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+// DownloadRandomVideoFile downloads a random video file from a given URL
+// The URL should point to a text file containing a list of video file names in the same directory
+func DownloadRandomVideoFile(fileNameURL string) (string, error) {
+
+	resp, err := http.Get(fileNameURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	buf, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	lines := strings.Split(string(buf), "\n")
+	selected := strings.TrimSpace(lines[rand.Intn(len(lines))])
+	if selected == "" {
+		return "", fmt.Errorf("no video file selected")
+	}
+	log.Printf("Selected video file: %s\n", selected)
+
+	parsedURL, err := url.Parse(fileNameURL)
+	if err != nil {
+		return "", err
+	}
+
+	// Remove the last segment from the path
+	parsedURL.Path = path.Dir(parsedURL.Path)
+
+	// Convert back to string
+	baseURL := parsedURL.String()
+
+	fileURL := baseURL + "/" + selected
+	log.Printf("File URL: %s\n", fileURL)
+
+	// Create a temp directory
+	tempDir, err := os.MkdirTemp("", "downloaded_files")
+	if err != nil {
+		return "", err
+	}
+
+	// Full path for the downloaded file
+	filePath := tempDir + "/" + selected
+	out, err := os.Create(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer out.Close()
+
+	resp, err = http.Get(fileURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return filePath, err
+}
 
 // calculateRtt calculates the round-trip time (RTT) based on the current time and the ack time
 // All timestamps are in RFC3339Nano format
